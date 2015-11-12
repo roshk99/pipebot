@@ -8,16 +8,18 @@ import utils
 
 ADC.setup()
 sensorPin = "P9_39"
+DIST_OFFSET = 0
 
 def handle_command_sensor(req):
     arr = []
-    for i in range(15):
+    for i in range(10):
         sensor1 = ADC.read(sensorPin)
         arr.append(sensor1)
     sensor_val = math.fsum(arr)/len(arr)
+    #print sensor_val
     distance_val = utils.voltage_to_distance(sensor_val)
     resp = sensorSrvResponse()
-    resp.voltage = float(distance_val)
+    resp.distance = float(distance_val) + DIST_OFFSET
     return resp
 
 def command_sensor_server():
