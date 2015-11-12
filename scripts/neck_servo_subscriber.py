@@ -26,4 +26,8 @@ def neck_servo():
 
 
 if __name__ == '__main__':
-    neck_servo()
+    try:
+        neck_servo()
+    except rospy.ROSInterruptException:
+        NECK_SERVO1.detach()
+        NECK_SERVO2.detach()

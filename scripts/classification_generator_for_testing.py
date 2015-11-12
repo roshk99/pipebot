@@ -11,7 +11,7 @@ def classificationGenerator():
     msg_to_send.junction_left = True
     msg_to_send.junction_right = False
     msg_to_send.junction = 'YLF'
-    msg_to_send.dist_till_turn = 18
+    msg_to_send.dist_till_turn = 13
     rate = rospy.Rate(10)
     while not rospy.is_shutdown():
         pub.publish(msg_to_send)

@@ -4,11 +4,13 @@
 # It calls multiple sub-functions in the process
 
 import rospy
-from scripts import algorithm, process_data, motion_plan_generator
+from scripts import algorithm, process_data, motion_plan_generator, DCMotor_subscriber
 import math 
 import time
 from sensor_msgs.msg import LaserScan, PointCloud
 from pipebot.msg import *
+import Adafruit_BBIO.PWM as PWM
+import Adafruit_BBIO.GPIO as GPIO
 
 CLASSIFICATION1 = '1'
 CLASSIFICATION2 = '2'
@@ -16,12 +18,16 @@ CLASSIFICATION3 = '3'
 INDEX = 0
 
 def main():
+	NECK_SERVO1,write(90)
+	NECK_SERVO2.write(90)
 	rospy.init_node("conductor")
 	rate = rospy.Rate(5) # 10hz
 	rospy.Subscriber('scan', LaserScan, process_data.main)
 	rospy.Subscriber('processedData', PointCloud, algorithm.main)
 	rospy.Subscriber('classificationResult', Classification, motion_plan)
 	rospy.spin()
+		
+		
 	
 def motion_plan(data):
 	if not data.junction == 'No result' and not data.junction == 'Straight':
@@ -54,4 +60,8 @@ if __name__ == '__main__':
     try:
         main()
     except rospy.ROSInterruptException:
-        pass
+    	pass
+    finally:
+        PWM.stop(PWM_pin)
+        PWM.cleanup(PWM_pin)
+        GPIO.cleanup(phase_pin)

@@ -12,7 +12,12 @@ REST_TIME = 0.5
 FREQ = 2000
 DATA_STORE = []
 GPIO.setup(phase_pin, GPIO.OUT)
-
+    
+def shutmotor():
+    PWM.stop(PWM_pin)
+    PWM.cleanup(PWM_pin)
+    GPIO.cleanup(phase_pin)
+        
 def callback(data):
     if len(DATA_STORE) is 0:
         prev_status = True
@@ -43,7 +48,7 @@ def callback(data):
             PWM.cleanup(PWM_pin)
             GPIO.cleanup(phase_pin)
         else:
-            setDuty(0)
+            setDuty(1)
     DATA_STORE.append(data)
 
 
@@ -85,15 +90,21 @@ def dcmotors():
     ##PWM.start(channel, duty, freq=2000)
     GPIO.output(phase_pin, GPIO.LOW)
     print 'start PWM'
-    PWM.start(PWM_pin, 100, FREQ, 0)
+    PWM.start(PWM_pin, 20, FREQ, 0)
     time.sleep(3)
     rospy.Subscriber("motor_command", motorCmd, callback)
+    rospy.on_shutdown(shutmotor)
     rospy.spin()
 
 
 if __name__ == '__main__':
-    dcmotors()
-    if rospy.is_shutdown():
+    try:
+        dcmotors()
+    except rospy.ROSInterruptException:
+        PWM.stop(PWM_pin)
+        PWM.cleanup(PWM_pin)
+        GPIO.cleanup(phase_pin)
+    finally:
         PWM.stop(PWM_pin)
         PWM.cleanup(PWM_pin)
         GPIO.cleanup(phase_pin)
