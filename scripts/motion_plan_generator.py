@@ -9,7 +9,7 @@ import math
 
 MOTION_MODES = ['Normal forward', 'Halt', 'Move backward', 'Turn left forward', 'Turn right forward']
 NECK_ANGLE_INCREMENT = 20
-NORMAL_DUTY_CYCLE = 60
+NORMAL_DUTY_CYCLE = 100
 TURNING_SPEED = 20
 TURNING_TIME_INCREMENT = 0.5
 SERVO_INIT_POS = 90
@@ -21,23 +21,15 @@ MOVE_SPEED = 2
 def motor_publish_command(data):
     pub = rospy.Publisher('motor_command', motorCmd, queue_size = 10)
     msg_to_send = motorCmd()
-    rospy.init_node('DCMotor_publisher', anonymous=True)
-    print "DCMotor_publisher node starting."
-    # rate = rospy.Rate(10) # 10hz
     msg_to_send.status = data[0]
     msg_to_send.phase = data[1]
     msg_to_send.duty_cycle_percent = data[2]
-    print data
     pub.publish(msg_to_send)
-    # rate.sleep()
-    
+
 def neck_servo_publish_command(data):
     pub = rospy.Publisher('neck_servo_command', Float32, queue_size = 10)
-    rospy.init_node('neck_servo_publisher', anonymous=True)
-    # rate = rospy.Rate(10) # 10hz
     rospy.loginfo('Neck servo angle:', data)
     pub.publish(data)
-    # rate.sleep()
 
 def turning_algorithm(turn_dir, turn_angle, servo_current_pos):
     if (turn_dir is "left"):
@@ -61,19 +53,19 @@ def turning_algorithm(turn_dir, turn_angle, servo_current_pos):
     return servo_current_pos
     
 
-def motion_modes(mode, turning_angle, duty_cycle_plan):
-    rospy.loginfo(rospy.get_caller_id() + "Current motion mode: ", MOTION_MODES[mode])
+def motion_modes(mode, turn_angle, duty_cycle_plan):
+    #print 'Motion Mode:', mode
     #Normal forward
-    if motion_info.mode is 0:
+    if mode is 0:
         motor_publish_command([True, True, duty_cycle_plan])
     #Halt
-    elif motion_info.mode is 1:
+    elif mode is 1:
         motor_publish_command([False, True, 1])
     #Move backwards
-    elif motion_info.mode is 2:
+    elif mode is 2:
         motor_publish_command([True, False, duty_cycle_plan])
     #Turn left forward
-    elif motion_info.mode is 3:
+    elif mode is 3:
         reverse_start_angle = turning_algorithm("left", turn_angle, SERVO_INIT_POS)
         # Need to implement a safe signal indicating it is safe to go back to neutral position
         
