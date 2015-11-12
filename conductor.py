@@ -5,7 +5,7 @@
 
 import rospy
 from src import collect_data
-from scripts import alg_stage1, utils, algorithm
+from scripts import utils, algorithm
 import math 
 import time
 
@@ -17,6 +17,7 @@ def main():
 	#Keep repeating while no errors
 	while not rospy.is_shutdown():
 		if MODE > 0:
+			print "============================================================="
 			MODE = input('input MODE: type a number among 0, 1, or 2. Normal Operation for 0, single data point for 1, and single sweep for 2 \n')
 		
 		if MODE == 'EXIT':
@@ -30,7 +31,9 @@ def main():
 		if data:
 			print data
 			#utils.format_to_matlab(data)
-			junction = algorithm.algorithm(data, True)
+			junction = algorithm.algorithm(data, False)
+			print 'Junction Decision'
+			print junction
 		else:
 			print 'No Raw Data'
 

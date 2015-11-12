@@ -4,7 +4,7 @@ import math
 import time
 
 #Global Variables
-DELTHETA = 5
+DELTHETA = 3
 MIN_ANGLE = 25
 MAX_ANGLE = 155
 MID_ANGLE = 90
