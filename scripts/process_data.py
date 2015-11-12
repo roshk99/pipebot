@@ -9,7 +9,7 @@ from geometry_msgs.msg import Point32
 
 MINDIST = 0.05299999937415123
 MAXDIST = 0.70
-rotation = 90*math.pi/180.0
+rotation = 110*math.pi/180.0
 PRINTRAW = False
 
 def main(data):

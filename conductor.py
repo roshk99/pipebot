@@ -22,7 +22,7 @@ def main():
 	
 def motion_plan(data):
 	if not data.junction == 'No result' and not data.junction == 'Straight':
-		rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction))
+		rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction) + " , Distance: " + str(data.dist_till_turn))
 	else:
 		rospy.loginfo("Inconclusive")
 	#motion_plan_generator.main(data)

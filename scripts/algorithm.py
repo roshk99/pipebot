@@ -13,10 +13,10 @@ MIN_SEG_LENGTH = 2
 TOL2 = 3
 TOL3 = 10
 ZERO_ANGLE=8
-MID_ANGLE=90
+MID_ANGLE = 90
 U_ANGLE = 40
-Y_ANGLE = 54
-Y_ANGLE2 = 50
+Y_ANGLE = 50
+Y_ANGLE2 = 65
 
 PRINTBOOL = False
 DEBUGBOOL = True
@@ -141,7 +141,7 @@ def algorithm(xvec,yvec, printbool = False, debugbool = False):
 			return None
 
 		distance = get_distance(segments, output)
-
+		
 		if debugbool:
 			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
 			print incl_angles
@@ -161,7 +161,7 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
 		results.append('TL')
 		lefts += 1
-	if not left0 and right0 and not left1 and right1 and left2 and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE)<5:
+	if not left0 and right0 and not left1 and right1 and left2 and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE)<ZERO_ANGLE:
 		results.append('YRF')
 		rights += 1
 	if not left0 and right1 and left2 and not right2 and angle2<ZERO_ANGLE and abs(angle1-MID_ANGLE)<ZERO_ANGLE:
@@ -179,7 +179,7 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 		results.append('UL')
 		lefts += 1
 		rights += 1
-	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-60)>5:
+	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE2)<ZERO_ANGLE:
 		results.append('YRB')
 		rights +=1
 	if not left0 and right0 and left1 and not right1 and left2 and not right2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1<ZERO_ANGLE and abs(angle2-Y_ANGLE2)>ZERO_ANGLE:
@@ -231,6 +231,7 @@ def get_distance(segments, output):
 		leftpoint = segments[2]['y'][0]
 		distance2 = rightpoint - leftpoint
 		distance = min(distance1, distance2)
+	return distance*100
 
 def get_x_y(points):
 	xvec = []
