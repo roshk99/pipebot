@@ -14,11 +14,7 @@ DATA_STORE = []
 GPIO.setup(phase_pin, GPIO.OUT)
 
 def callback(data):
-    #rospy.loginfo("\n");
-    rospy.loginfo(rospy.get_name() + ": I heard \n", data)
-    #rospy.loginfo("%s\n" % data.data)
-    #rospy.loginfo("\n");
-    print data
+    #print 'Subscriber', data
     if len(DATA_STORE) is 0:
         prev_status = True
         prev_duty = 1
