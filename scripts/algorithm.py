@@ -12,13 +12,14 @@ TOL = 0.1
 MIN_SEG_LENGTH = 2
 TOL2 = 3
 TOL3 = 10
-ZERO_ANGLE=7
+ZERO_ANGLE=10
 MID_ANGLE=90
-T_ONE_ANGLE=18
-SUM_TOL=24
+U_ANGLE = 40
+Y_ANGLE = 60
+
 
 PRINTBOOL = False
-DEBUGBOOL = False
+DEBUGBOOL = True
 
 def rad_to_deg(ang):
 	return ang*180.0/math.pi
@@ -28,7 +29,7 @@ def plot_matlab(x, y, xnew, ynew, segments=False):
 	if segments:
 		for segment in segments:
 				print 'plot(', list(segment['x']), ',', list(segment['y']), ", 'r', 'LineWidth', 2);hold on;"
-	print 'x=', x, ';y=', y, ';xnew=', xnew, ';ynew=', ynew, ";hold on;plot(xnew, ynew, 'r.', 'MarkerSize', 30); plot(x,y,'k.', 'MarkerSize', 20); axis square;hold off;"
+	print 'x=', list(x), ';y=', list(y), ';xnew=', xnew, ';ynew=', ynew, ";hold on;plot(xnew, ynew, 'r.', 'MarkerSize', 30); plot(x,y,'k.', 'MarkerSize', 20); axis square;hold off;"
 	print '_________'
 
 def algorithm(xvec,yvec, printbool = False, debugbool = False):
@@ -134,9 +135,12 @@ def algorithm(xvec,yvec, printbool = False, debugbool = False):
 		if debugbool:
 			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
 			print incl_angles
+		if printbool:
+			plot_matlab(x,y,xnew,ynew,segments)
 		
 		output = rules_engine(segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right'], incl_angles[0], incl_angles[1])
 		return output
+
 
 def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 
@@ -144,35 +148,50 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 	lefts = 0
 	rights = 0
 
-	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and angle2> ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE:
-		results.append('YL')
+	if left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE:
+		results.append('YLF')
 		lefts += 1
-	if not left0 and left1 and left2 and angle1<T_ONE_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
+	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
 		results.append('TL')
 		lefts += 1
-	if not left0 and right1 and left2 and angle1<MID_ANGLE and angle1>ZERO_ANGLE and angle2<ZERO_ANGLE:
-		results.append('YR')
+	if not left0 and right0 and not left1 and right1 and left2 and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE)<5:
+		results.append('YRF')
 		rights += 1
-	if not left0 and not left1 and right0 and right1 and left2 and not right2:
+	if not left0 and right1 and left2 and not right2 and angle2<ZERO_ANGLE and abs(angle1-MID_ANGLE)<ZERO_ANGLE:
 		results.append('TR')
 		rights += 1
-	if left1 and right0 and right1 and left2 and right2 and ab(angle1-MID_ANGLE)<ZERO_ANGLE and abs(ANGLE2-MID_ANGLE)<ZERO_ANGLE:
+	if right0 and left1 and right1 and left2 and abs(angle1-MID_ANGLE)<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
 		results.append('TLR')
 		lefts += 1
 		rights += 1
-	if left1 and right0 and right1 and left2 and not right2 and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE:
-		results.append('UR')
-		lefts += 1
-		rights += 1
-	if right0 and right1 and left2 and right2 and angle2>ZERO_ANGLE:
+	if right0 and left1 and right1 and left2 and angle2 >ZERO_ANGLE and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)<5:
 		results.append('UL')
 		lefts += 1
 		rights += 1
-
+	if right0 and left1 and right1 and left2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1>ZERO_ANGLE and angle1>angle2 and abs(angle1-U_ANGLE)<5:
+		results.append('UR')
+		lefts += 1
+		rights += 1
+	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-60)>5:
+		results.append('YRB')
+		rights +=1
+	if not left0 and left1 and left2 and not right2 and not right1 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1>ZERO_ANGLE:
+		results.append('YLB')
+		lefts +=1
+	if left1 and right0 and right1 and left1 and left2 and angle1 > ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)>5:
+		results.append('YTR')
+		lefts += 1
+		rights += 1
+	if right0 and left1 and right1 and left2 and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1 > angle2 and abs(angle1-U_ANGLE)>5:
+		results.append('YTL')
+		lefts += 1
+		rights += 1
+	if len(results) > 1:
+		print 'Results', results
+	
 	junction_left = False
 	junction_right = False
 	if len(results) == 0:
-		print 'Inconclusive Classification Or Straight'
 		return junction_left, junction_right, 'Straight'
 	elif len(results) == 1:
 		if lefts > 0:
