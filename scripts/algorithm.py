@@ -17,7 +17,6 @@ MID_ANGLE=90
 U_ANGLE = 40
 Y_ANGLE = 60
 
-
 PRINTBOOL = False
 DEBUGBOOL = True
 
@@ -165,11 +164,11 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 		lefts += 1
 		rights += 1
 	if right0 and left1 and right1 and left2 and angle2 >ZERO_ANGLE and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)<5:
-		results.append('UL')
+		results.append('UR')
 		lefts += 1
 		rights += 1
 	if right0 and left1 and right1 and left2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1>ZERO_ANGLE and angle1>angle2 and abs(angle1-U_ANGLE)<5:
-		results.append('UR')
+		results.append('UL')
 		lefts += 1
 		rights += 1
 	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-60)>5:
