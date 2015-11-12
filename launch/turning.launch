@@ -1,0 +1,6 @@
+<launch>
+  <node name="DCMotor_subscriber" pkg="pipebot" type="DCMotor_subscriber.py" output="screen" />
+  <node name="neck_servo_subscriber" pkg="pipebot" type="neck_servo_subscriber.py" output="screen" />
+  <node name="ClassificationReceiver" pkg="pipebot" type="test_motionplanner.py" output="screen" />
+  <node name="classificationGenerator" pkg="pipebot" type="classification_generator_for_testing.py" output="screen" />
+</launch>

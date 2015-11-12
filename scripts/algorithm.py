@@ -19,7 +19,14 @@ Y_ANGLE = 50
 Y_ANGLE2 = 65
 
 PRINTBOOL = False
-DEBUGBOOL = True
+DEBUGBOOL = False
+
+MANUAL_CLASSIFICATION = True
+JUNCTION_LEFT_MANUAL = True
+JUNCTION_RIGHT_MANUAL = False
+JUNCTION_MANUAL = 'YLF'
+DISTANCE_MANUAL = 10
+
 
 def rad_to_deg(ang):
 	return ang*180.0/math.pi
@@ -137,14 +144,12 @@ def algorithm(xvec,yvec, printbool = False, debugbool = False):
 			plot_matlab(x,y,xnew,ynew,segments)
 		
 		output = rules_engine(segments[0]['slope'], segments[1]['slope'], segments[2]['slope'], incl_angles[0], incl_angles[1])
-		if not output:
-			return None
-		
 		distance = get_distance(segments, output)
-		#output = (False, True, 'TR')
-		#distance = 10
+			
+		if not output:
+			return None	
+			
 		if debugbool:
-			#print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
 			print segments[0]['slope'], segments[1]['slope'], segments[2]['slope']
 			print incl_angles
 			print distance
@@ -195,7 +200,8 @@ def rules_engine(slope0, slope1, slope2, angle1, angle2):
 		lefts += 1
 		rights += 1
 	if len(results) > 1:
-		print 'Results', results
+		#print 'Results', results
+		pass
 	
 	junction_left = False
 	junction_right = False
@@ -252,13 +258,19 @@ def get_x_y(points):
 def main(data):
 	if len(data.points) > 0:
 		xvec, yvec = get_x_y(data.points)
-		result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
+		if MANUAL_CLASSIFICATION:
+			output = (JUNCTION_LEFT_MANUAL, JUNCTION_RIGHT_MANUAL, JUNCTION_MANUAL)
+			distance = DISTANCE_MANUAL
+			result = (output,distance)
+		else:
+			result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
 		if result:
 			output = Classification(junction_left=result[0][0], junction_right=result[0][1], junction=result[0][2], dist_till_turn = result[1])
 			pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
 			pub.publish(output)
 		else:
-			print "No Result"
+			if DEBUGBOOL:
+				print "No Result"
 
 def test_main(xvec, yvec):
 	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)

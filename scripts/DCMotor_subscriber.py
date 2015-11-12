@@ -14,7 +14,6 @@ DATA_STORE = []
 GPIO.setup(phase_pin, GPIO.OUT)
 
 def callback(data):
-    #print 'Subscriber', data
     if len(DATA_STORE) is 0:
         prev_status = True
         prev_duty = 1
@@ -54,6 +53,7 @@ def setDuty(value):
         value = 100
     if value < 0:
         value = 0
+    PWM.start(PWM_pin, value, FREQ, 0)
     PWM.set_duty_cycle(PWM_pin, value)
     
 def setdirection(phase, duty):
@@ -85,7 +85,7 @@ def dcmotors():
     ##PWM.start(channel, duty, freq=2000)
     GPIO.output(phase_pin, GPIO.LOW)
     print 'start PWM'
-    PWM.start(PWM_pin, 80, FREQ, 0)
+    PWM.start(PWM_pin, 100, FREQ, 0)
     time.sleep(3)
     rospy.Subscriber("motor_command", motorCmd, callback)
     rospy.spin()
