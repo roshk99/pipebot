@@ -25,7 +25,7 @@ def motion_plan(data):
 		rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction))
 	else:
 		rospy.loginfo("Inconclusive")
-	motion_plan_generator.main(data)
+	#motion_plan_generator.main(data)
         
 if __name__ == '__main__':
     try:

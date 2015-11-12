@@ -69,7 +69,6 @@ def turning(servo1, servo2):
         servo1_angle_increment = int(math.floor((servo1[t+1] - servo1_current_pos)/increment_num))
         servo2_angle_increment = int(math.floor((servo2[t+1] - servo2_current_pos)/increment_num))
         for i in range(int(math.floor(increment_num - 1))):
-            print 'here'
             servo1_current_pos += servo1_angle_increment
             servo2_current_pos += servo2_angle_increment
             neck_servo_publish_command1(servo1_current_pos)
@@ -166,6 +165,7 @@ def main(data):
         #stop the motors
         motion_modes(1, None, None)
         print 'should have stopped the motor'
+        time.sleep(3)
         time.sleep(HALT_TIME)
         if data.junction_right is True and data.junction_left is False:
             choice = raw_input('Please input whether to turn right or not (Y/N): ')
