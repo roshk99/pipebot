@@ -8,8 +8,8 @@ from sensor_msgs.msg import LaserScan, PointCloud
 from geometry_msgs.msg import Point32
 
 MINDIST = 0.05299999937415123
-MAXDIST = 0.70
-rotation = 110*math.pi/180.0
+MAXDIST = 0.90
+rotation = 120*math.pi/180.0
 PRINTRAW = False
 
 def main(data):

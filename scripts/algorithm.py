@@ -7,9 +7,9 @@ from scipy import interpolate, stats
 from rdp import rdp
 from pipebot.msg import Classification
 
-EPSILON = 0.05
+EPSILON = 0.1
 TOL = 0.1
-MIN_SEG_LENGTH = 2
+MIN_SEG_LENGTH = 4
 TOL2 = 3
 TOL3 = 10
 ZERO_ANGLE=8
@@ -136,61 +136,62 @@ def algorithm(xvec,yvec, printbool = False, debugbool = False):
 		if printbool:
 			plot_matlab(x,y,xnew,ynew,segments)
 		
-		output = rules_engine(segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right'], incl_angles[0], incl_angles[1])
+		output = rules_engine(segments[0]['slope'], segments[1]['slope'], segments[2]['slope'], incl_angles[0], incl_angles[1])
 		if not output:
 			return None
-
-		distance = get_distance(segments, output)
 		
+		distance = get_distance(segments, output)
+		#output = (False, True, 'TR')
+		#distance = 10
 		if debugbool:
-			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
+			#print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
+			print segments[0]['slope'], segments[1]['slope'], segments[2]['slope']
 			print incl_angles
 			print distance
 		return output, distance
 
-
-def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
+def rules_engine(slope0, slope1, slope2, angle1, angle2):
 
 	results = []
 	lefts = 0
 	rights = 0
-
-	if left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and abs(angle2-Y_ANGLE2)<ZERO_ANGLE:
+	
+	if angle1<10 and abs(angle2-90)>11 and angle2>10 and slope2 < 0:
 		results.append('YLF')
 		lefts += 1
-	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
-		results.append('TL')
-		lefts += 1
-	if not left0 and right0 and not left1 and right1 and left2 and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE)<ZERO_ANGLE:
+	if abs(angle1-90)>11 and angle1>10 and angle2<10 and slope0 > 0:
 		results.append('YRF')
 		rights += 1
-	if not left0 and right1 and left2 and not right2 and angle2<ZERO_ANGLE and abs(angle1-MID_ANGLE)<ZERO_ANGLE:
+	if angle1<10 and abs(angle2-90)<11:
+		results.append('TL')
+		lefts += 1
+	if angle2<10 and abs(angle1-90)<11:
 		results.append('TR')
 		rights += 1
-	if right0 and left1 and right1 and left2 and abs(angle1-MID_ANGLE)<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
+	if angle1<10 and abs(angle2-90)>11 and angle2>10 and slope2 > 0:
+		results.append('YLB')
+		lefts += 1
+	if abs(angle1-90)>11 and angle1>10 and angle2<10 and slope0 < 0:
+		results.append('YRB')
+		rights += 1
+	if abs(angle1-90)<11 and abs(angle2-90)<11 and abs(slope1)<1:
 		results.append('TLR')
 		lefts += 1
 		rights += 1
-	if right0 and left1 and right1 and left2 and angle2 >ZERO_ANGLE and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)<5:
-		results.append('UR')
+	if abs(angle1-90)>11 and abs(angle2-90)>11 and slope1>1:
+		results.append('YTL')
 		lefts += 1
 		rights += 1
-	if right0 and left1 and right1 and left2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1>ZERO_ANGLE and angle1>angle2 and abs(angle1-U_ANGLE)<5:
-		results.append('UL')
-		lefts += 1
-		rights += 1
-	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-Y_ANGLE2)<ZERO_ANGLE:
-		results.append('YRB')
-		rights +=1
-	if not left0 and right0 and left1 and not right1 and left2 and not right2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1<ZERO_ANGLE and abs(angle2-Y_ANGLE2)>ZERO_ANGLE:
-		results.append('YLB')
-		lefts +=1
-	if left1 and right0 and right1 and left1 and left2 and angle1 > ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)>5:
+	if abs(angle1-90)>11 and abs(angle2-90)>11 and slope1<-1:
 		results.append('YTR')
 		lefts += 1
 		rights += 1
-	if right0 and left1 and right1 and left2 and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1 > angle2 and abs(angle1-U_ANGLE)>5:
-		results.append('YTL')
+	if abs(angle1-45)<11 and abs(angle2-45)<11 and slope1<1 and slope1>0:
+		results.append('UL')
+		lefts += 1
+		rights += 1
+	if abs(angle1-45)<11 and abs(angle2-45)<11 and slope1>-1 and slope1<0:
+		results.append('UR')
 		lefts += 1
 		rights += 1
 	if len(results) > 1:
@@ -230,7 +231,14 @@ def get_distance(segments, output):
 		rightpoint = segments[1]['y'][-1]
 		leftpoint = segments[2]['y'][0]
 		distance2 = rightpoint - leftpoint
-		distance = min(distance1, distance2)
+		if distance1<0 and distance2>0:
+			distance = distance2
+		if distance2<0 and distance1>0:
+			distance = distance1
+		if distance1>0 and distance2>0:
+			distance = min(distance1, distance2)
+		if distance1<0 and distance2<0:
+			distance = 0
 	return distance*100
 
 def get_x_y(points):
