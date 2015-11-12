@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+
+import rospy
 import numpy as np
 import random
 import math
@@ -328,49 +331,91 @@ def generate_matlab_plot(data_points):
 	print 'x=', x, ';y=', y, ';x_smooth=', x_smooth, ';y_smooth=', y_smooth, ";plot(x,y,'.b', 'MarkerSize', 20);hold on; plot(x_smooth,y_smooth, 'r');hold off; axis square; axis equal;"
 
 
-def fine_classification_left(data_points, clusters):
-	angles = []
-	slopes = []
+def pre_fine_classification(data_points, clusters):
+	angles_left = []
+	slopes_left = []
 	for point in data_points.get_points():
 		angle = point.get_angle()
 		slope = point.get_slope()
 		if angle < deg_to_rad(LEFT_ANGLE1) and angle > deg_to_rad(LEFT_ANGLE2):
-			angles.append(rad_to_deg(angle))
-			slopes.append(slope)
-	idxs = np.argsort(angles)
-	angles = list(np.array(angles)[idxs])
-	slopes = list(np.array(slopes)[idxs])
+			angles_left.append(rad_to_deg(angle))
+			slopes_left.append(slope)
+	idxs = np.argsort(angles_left)
+	angles_left = list(np.array(angles_left)[idxs])
+	slopes_left = list(np.array(slopes_left)[idxs])
+	
+	angles_right = []
+	slopes_right = []
+	for point in data_points.get_points():
+		angle = point.get_angle()
+		slope = point.get_slope()
+		if angle < deg_to_rad(RIGHT_ANGLE1) and angle > deg_to_rad(RIGHT_ANGLE2):
+			angles_right.append(rad_to_deg(angle))
+			slopes_right.append(slope)
+	idxs = np.argsort(angles_right)
+	angles_right = list(np.array(angles_right)[idxs])
+	slopes_right = list(np.array(slopes_right)[idxs])
+	
+	print angles_left, slopes_left
+	print angles_right, slopes_right
+	return [angles_left, angles_right], [slopes_left, slopes_right]
+
+def fine_classification_left(data_points, clusters):
+	result = pre_fine_classification(data_points, clusters)
 
 
 def fine_classification_right(data_points, clusters):
-	pass
+	result = pre_fine_classification(data_points, clusters)
 
 
 def fine_classification_both(data_points, clusters):
-	pass
+	result = pre_fine_classification(data_points, clusters)
 
 
 def algorithm(data, plot=False, debug=False):
 	data_points = DataPoints()
 	clusters = Clusters()
+	# i = 0
+	# for point in data:
+	# 	if point.x == 0.0:
+	# 		angle = math.pi/2
+	# 	else:
+	# 		angle = math.atan(point.y / point.x)
+	# 	point = DataPoint(i, point.x, point.y, deg_to_rad(angle))
+	# 	data_points.add_point(point)
+	# 	i += 1
+	
 	i = 0
-	for angle, distance in data:
-		x = distance*math.cos(deg_to_rad(angle))
-		y = distance*math.sin(deg_to_rad(angle))
-		point = DataPoint(i, x, y, deg_to_rad(angle))
+	for xval, yval in zip(x,y):
+		if xval == 0.0:
+			angle = math.pi/2
+		else:
+			angle = math.atan2(yval,xval)
+			if angle < 0: angle += 2*math.pi
+		point = DataPoint(i, xval, yval, angle)
 		data_points.add_point(point)
 		i += 1
 	find_centers(data_points, clusters, K)
 	process_data(data_points, clusters)
 	coarse_junction = coarse_classification(data_points, clusters)
-	if coarse_junction[0] and not coarse_junction[1]:
-		fine_classification_left(data_points, clusters)
-	elif not coarse_junction[0] and coarse_junction[1]:
-		fine_classification_right(data_points, clusters)
-	else:
-		fine_classification_both(data_points, clusters)
-	if plot:
-		generate_matlab_plot(data_points)
-	return coarse_junction
+	
+	# if coarse_junction[0] and not coarse_junction[1]:
+	# 	fine_classification_left(data_points, clusters)
+	# elif not coarse_junction[0] and coarse_junction[1]:
+	# 	fine_classification_right(data_points, clusters)
+	# else:
+	# 	fine_classification_both(data_points, clusters)
+	# if plot:
+	# 	generate_matlab_plot(data_points)
+	# return coarse_junction
+	
+def main(data):
+	rospy.loginfo("Processed Data First Point: " + str(data.points[0].x) + "," + str(data.points[0].y))
+	#result = algorithm(data.points)
+	#print 'result', result
+
+# result = algorithm(None, True)
+# print result
+    
 
 
