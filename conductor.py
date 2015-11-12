@@ -5,12 +5,14 @@
 
 import rospy
 from src import collect_data
-from scripts import alg_stage1, utils
+from scripts import alg_stage1, utils, algorithm
 import math 
+import time
 
 def main():
 	rospy.init_node("conductor")
 	MODE = 2
+	time.sleep(0.5)
 	
 	#Keep repeating while no errors
 	while not rospy.is_shutdown():
@@ -27,7 +29,8 @@ def main():
 		print 'Data:'
 		if data:
 			print data
-			utils.format_to_matlab(data)
+			#utils.format_to_matlab(data)
+			junction = algorithm.algorithm(data, True)
 		else:
 			print 'No Raw Data'
 

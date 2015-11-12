@@ -47,7 +47,7 @@ def voltage_to_feedback(voltage):
     c = -242.67
     d = 209.85
     feedback = a*(voltage**3) + b*(voltage**2) + c*(voltage) + d
-    return int(feedback + 14)
+    return feedback + 14.0
     
 def voltage_to_distance(voltage):
     a = -0.2113

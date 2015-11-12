@@ -8,6 +8,8 @@ from pipebot.msg import *
 import math
 from scripts import utils
 
+MAXDIST = 30
+
 #command_servo function takes actual angle argument 
 #the feedback it returns is also in actual angle
 def command_servo(angle):
@@ -39,5 +41,5 @@ def collect_data(angle_range):
     for angle in angle_range:
         feedback_angle = command_servo(angle)
         distance = command_sensor()
-        data.append((feedback_angle, distance))
+        data.append((feedback_angle, min(distance, MAXDIST)))
     return data

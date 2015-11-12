@@ -12,7 +12,7 @@ import time
 
 FEEDBACKTOL = 2
 TIME_INCREMENT = 0.25
-TIME_MAX = 3
+TIME_MAX = 2
 ADC.setup()
 
 servo1 = Servo(PWM1B)  #servo signal input pin assignment 
