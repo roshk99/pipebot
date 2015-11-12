@@ -17,11 +17,11 @@ def main():
 	rate = rospy.Rate(10) # 10hz
 	rospy.Subscriber('scan', LaserScan, process_data.main)
 	rospy.Subscriber('processedData', PointCloud, algorithm.main)
-	rospy.Subscriber('classificationResult', Classification, conductor.motion_plan)
+	rospy.Subscriber('classificationResult', Classification, motion_plan)
 	rospy.spin()
 		
 def motion_plan(data):
-	rospy.info("Algorithm Result" + data.junction)
+	rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction))
 
 if __name__ == '__main__':
     try:

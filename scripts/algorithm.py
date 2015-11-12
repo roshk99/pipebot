@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#import rospy
+import rospy
 import numpy as np
 import math
 from scipy import interpolate, stats
@@ -185,7 +185,6 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 			junction_left = True
 		if rights > 0:
 			junction_right = True
-		print 'Inconclusive Classification Or Straight'
 		return junction_left, junction_right, 'Unknown'
 
 def get_x_y(points):
@@ -197,14 +196,16 @@ def get_x_y(points):
 	return xvec, yvec
 
 def main(data):
-	rospy.loginfo("Processed Data First Point: " + str(data.points[0].x) + "," + str(data.points[0].y))
-	xvec, yvec = get_x_y(data.points)
-	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
-	rospy.loginfo("Junction Left:" + str(result[0]) + " , Junction Right: " + str(result[1]) + " , Classification: " + result[2])
+	if len(data.points) > 0:
+		xvec, yvec = get_x_y(data.points)
+		result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
+		if result:
+			output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2])
+			pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
+			pub.publish(output)
+		else:
+			print "No Result"
 
-	output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2])
-	pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
-    pub.publish(output)
 
 def test_main(xvec, yvec):
 	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
