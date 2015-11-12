@@ -1,32 +1,27 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import Float32
+from std_msgs.msg import Int16
 import time
 from bbio import *
 from bbio.libraries.Servo import *
 
-NECK_SERVO1 = Servo(PWM1A)
-NECK_SERVO2 = Servo(PWM1B)
+NECK_SERVO1 = Servo(PWM1B)
+NECK_SERVO2 = Servo(PWM2B)
+
 
 def callback1(data):
-    #rospy.loginfo("\n");
-    rospy.loginfo(rospy.get_name() + ": I heard \n", data)
-    #rospy.loginfo("%s\n" % data.data)
-    #rospy.loginfo("\n");
-    NECK_SERVO1(data)
+    NECK_SERVO1.write(data.data)
+    print data
 
 def callback2(data):
-    #rospy.loginfo("\n");
-    rospy.loginfo(rospy.get_name() + ": I heard \n", data)
-    #rospy.loginfo("%s\n" % data.data)
-    #rospy.loginfo("\n");
-    NECK_SERVO2(data)
+    NECK_SERVO2.write(data.data)
+    print data
 
 def neck_servo():
     rospy.init_node('neck_servo_subscriber', anonymous=True)
     print "neck_servo_subscriber node starting."
-    rospy.Subscriber("neck_servo_command1", Float32, callback1)
-    rospy.Subscriber("neck_servo_command2", Float32, callback2)
+    rospy.Subscriber("neck_servo_command1", Int16, callback1)
+    rospy.Subscriber("neck_servo_command2", Int16, callback2)
     rospy.spin()
 
 

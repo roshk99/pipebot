@@ -3,7 +3,7 @@ import rospy
 from bbio import *
 from pipebot.msg import *
 import Adafruit_BBIO.PWM as PWM
-from std_msgs.msg import Float32
+from std_msgs.msg import Int16
 import time
 import math
 
@@ -13,7 +13,7 @@ NORMAL_DUTY_CYCLE = 100
 SLOW_DUTY_CYCLE = 40
 TURNING_SPEED = 20
 TURNING_SEG_TIME = 2
-TURNING_TIME_INCREMENT = 0.5
+TURNING_TIME_INCREMENT = 1
 SERVO_INIT_POS = 90
 DIST_TOL = 5
 HALT_TIME = 2
@@ -31,13 +31,11 @@ def motor_publish_command(data):
     pub.publish(msg_to_send)
 
 def neck_servo_publish_command1(data):
-    pub = rospy.Publisher('neck_servo_command1', Float32, queue_size = 10)
-    rospy.loginfo('Neck servo angle1:', data)
+    pub = rospy.Publisher('neck_servo_command1', Int16, queue_size = 10)
     pub.publish(data)
     
 def neck_servo_publish_command2(data):
-    pub = rospy.Publisher('neck_servo_command2', Float32, queue_size = 10)
-    rospy.loginfo('Neck servo angle2:', data)
+    pub = rospy.Publisher('neck_servo_command2', Int16, queue_size = 10)
     pub.publish(data)
 
 # def turning_algorithm(turn_dir, turn_angle, servo_current_pos):
@@ -68,9 +66,10 @@ def turning(servo1, servo2):
     servo2_current_pos = servo2[0]
     for t in range(time_int - 1):
         increment_num = TURNING_SEG_TIME/TURNING_TIME_INCREMENT
-        servo1_angle_increment = (servo1[t+1] - servo1_current_pos)/increment_num
-        servo2_angle_increment = (servo2[t+1] - servo2_current_pos)/increment_num
-        for i in range(increment_num - 1):
+        servo1_angle_increment = int(math.floor((servo1[t+1] - servo1_current_pos)/increment_num))
+        servo2_angle_increment = int(math.floor((servo2[t+1] - servo2_current_pos)/increment_num))
+        for i in range(int(math.floor(increment_num - 1))):
+            print 'here'
             servo1_current_pos += servo1_angle_increment
             servo2_current_pos += servo2_angle_increment
             neck_servo_publish_command1(servo1_current_pos)
@@ -92,19 +91,19 @@ def motion_modes(mode, turn_angle, duty_cycle_plan):
     elif mode is 2:
         motor_publish_command([True, False, duty_cycle_plan])
     elif mode is 3 or 4:
-        if turn_angle is 45:
+        if turn_angle == 45:
+            servo1 = [90, 90, 95, 100, 100, 105, 110, 110, 105, 100, 100, 95, 90, 90]
+            servo2 = [90, 95, 100, 105, 110, 115, 115, 115, 115, 110, 105, 100, 95, 90]
+            turning(servo1, servo2)
+        elif turn_angle == -45:
             servo1 = []
             servo2 = []
             turning(servo1, servo2)
-        elif turn_angle is -45:
+        elif turn_angle == 90:
             servo1 = []
             servo2 = []
             turning(servo1, servo2)
-        elif turn_angle is 90:
-            servo1 = []
-            servo2 = []
-            turning(servo1, servo2)
-        elif turn_angle is -90:
+        elif turn_angle == -90:
             servo1 = []
             servo2 = []
             turning(servo1, servo2)
@@ -166,6 +165,7 @@ def main(data):
     else:
         #stop the motors
         motion_modes(1, None, None)
+        print 'should have stopped the motor'
         time.sleep(HALT_TIME)
         if data.junction_right is True and data.junction_left is False:
             choice = raw_input('Please input whether to turn right or not (Y/N): ')
@@ -179,13 +179,13 @@ def main(data):
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
                         return
-                    turning_angle = 45
+                    turning_angle = -45
                     motion_modes(4, turning_angle, None)
                 elif data.junction == 'TR':
                     if data.dist_till_turn > DIST_TILL_TURN_90:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
                         return
-                    turning_angle = 90
+                    turning_angle = -90
                     motion_modes(4, turning_angle, None)
             else:
                 motion_modes(0, None, NORMAL_DUTY_CYCLE)
@@ -198,7 +198,6 @@ def main(data):
                     time.sleep(0.5)
                     motion_modes(0, None, NORMAL_DUTY_CYCLE)
                 elif data.junction == 'YLF':
-                    print 'should '
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
                         return
@@ -230,12 +229,11 @@ def main(data):
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
                         return
-                    turning_angle = 45
+                    turning_angle = -45
                     motion_modes(4, turning_angle, None)
                 elif data.junction == 'TLR':
                     choice = raw_input('Please input whether to turn right or left (L/R): ')
                     print '\n'
-                    turning_angle = 90
                     if choice == 'L' or 'l':
                         if data.dist_till_turn > DIST_TILL_TURN_90:
                             motion_modes(0, None, SLOW_DUTY_CYCLE)
@@ -246,5 +244,5 @@ def main(data):
                         if data.dist_till_turn > DIST_TILL_TURN_90:
                             motion_modes(0, None, SLOW_DUTY_CYCLE)
                             return
-                        turning_angle = 90
+                        turning_angle = -90
                         motion_modes(4, turning_angle, None)
