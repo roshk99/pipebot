@@ -19,13 +19,13 @@ def main():
 	rospy.Subscriber('processedData', PointCloud, algorithm.main)
 	rospy.Subscriber('classificationResult', Classification, motion_plan)
 	rospy.spin()
-		
+	
 def motion_plan(data):
 	if not data.junction == 'No result' and not data.junction == 'Straight':
 		rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction))
 	else:
 		rospy.loginfo("Inconclusive")
-	#motion_plan_generator.main(data)
+	motion_plan_generator.main(data)
         
 if __name__ == '__main__':
     try:
