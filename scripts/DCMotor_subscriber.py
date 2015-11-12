@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import rospy
-from std_msgs.msg import String
 from pipebot.msg import *
 import Adafruit_BBIO.PWM as PWM
 import Adafruit_BBIO.GPIO as GPIO
@@ -16,7 +15,7 @@ GPIO.setup(phase_pin, GPIO.OUT)
 
 def callback(data):
     #rospy.loginfo("\n");
-    rospy.loginfo(rospy.get_name() + ": I heard \n")
+    rospy.loginfo(rospy.get_name() + ": I heard \n", data)
     #rospy.loginfo("%s\n" % data.data)
     #rospy.loginfo("\n");
     print data
