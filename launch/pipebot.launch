@@ -4,4 +4,5 @@
   <node name="accelPub" pkg="pipebot" type="accelPub.py" output="screen" />
   <node name="bodyMotors" pkg="pipebot" type="bodyMotors" output="screen" />
   <node name="neckMotors" pkg="pipebot" type="neckMotors" output="screen" />
+  <node name="sensorServo" pkg="pipebot" type="sensorServo" output="screen" />
 </launch>
