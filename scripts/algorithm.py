@@ -219,7 +219,7 @@ def main(data):
 		xvec, yvec = get_x_y(data.points)
 		result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
 		if result:
-			output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2])
+			output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2], dist_till_turn = 0)
 			pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
 			pub.publish(output)
 		else:
@@ -229,5 +229,4 @@ def main(data):
 def test_main(xvec, yvec):
 	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
 	print 'result', result
-
 

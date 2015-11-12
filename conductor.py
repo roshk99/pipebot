@@ -4,11 +4,11 @@
 # It calls multiple sub-functions in the process
 
 import rospy
-from scripts import algorithm, process_data
+from scripts import algorithm, process_data, motion_plan_generator
 import math 
 import time
 from sensor_msgs.msg import LaserScan, PointCloud
-from pipebot.msg import Classification
+from pipebot.msg import *
 
 BUFFER_LENGTH = 3
 	
@@ -22,7 +22,8 @@ def main():
 		
 def motion_plan(data):
 	rospy.loginfo("Junction Left: " + str(data.junction_left) + " , Junction Right: " + str(data.junction_right) + " , Classification: " + str(data.junction))
-
+	motion_plan_generator.main(data)
+        
 if __name__ == '__main__':
     try:
         main()
