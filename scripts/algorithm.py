@@ -123,10 +123,10 @@ def stage_1(mu, clusters, labels):
 
         clusters_x.append(xd)
         clusters_y.append(yd)
-        #clusters_xl.append(xl + xl2)
-        #clusters_yl.append(yl + yl2)
-        clusters_xl.append(xl)
-        clusters_yl.append(yl)
+        clusters_xl.append(xl + xl2)
+        clusters_yl.append(yl + yl2)
+        #clusters_xl.append(xl)
+        #clusters_yl.append(yl)
         slopes.append(slope)
         intercepts.append(intercept)
         
