@@ -10,7 +10,7 @@ import math
 MOTION_MODES = ['Normal forward', 'Halt', 'Move backward', 'Turn left forward', 'Turn right forward']
 NECK_ANGLE_INCREMENT = 10
 NORMAL_DUTY_CYCLE = 100
-NORMAL_DUTY_CYCLE = 40
+SLOW_DUTY_CYCLE = 40
 TURNING_SPEED = 20
 TURNING_SEG_TIME = 2
 TURNING_TIME_INCREMENT = 0.5
@@ -91,23 +91,23 @@ def motion_modes(mode, turn_angle, duty_cycle_plan):
     #Move backwards
     elif mode is 2:
         motor_publish_command([True, False, duty_cycle_plan])
-    else:
+    elif mode is 3 or 4:
         if turn_angle is 45:
             servo1 = []
             servo2 = []
-        	turning(servo1, servo2)
+            turning(servo1, servo2)
         elif turn_angle is -45:
             servo1 = []
             servo2 = []
-        	turning(servo1, servo2)
+            turning(servo1, servo2)
         elif turn_angle is 90:
             servo1 = []
             servo2 = []
-        	turning(servo1, servo2)
+            turning(servo1, servo2)
         elif turn_angle is -90:
             servo1 = []
             servo2 = []
-        	turning(servo1, servo2)
+            turning(servo1, servo2)
         else:
             print 'Unrecognized angle \n'
     
@@ -154,7 +154,7 @@ def ujoint_turn_algorithm(turn_dir):
     #     neck_servo_publish_command(servo_current_pos)
     uservo1 = []
     uservo2 = []
-    if (turn_dir is 'left'):
+    if (turn_dir == 'left'):
     	turning(uservo1, uservo2)
     else:
     	turning([180-x for x in uservo1], [180-x for x in uservo2])
@@ -168,82 +168,83 @@ def main(data):
         motion_modes(1, None, None)
         time.sleep(HALT_TIME)
         if data.junction_right is True and data.junction_left is False:
-            choice = input('Please input whether to turn right or not (Y/N): ')
+            choice = raw_input('Please input whether to turn right or not (Y/N): ')
             print '\n'
-            if choice is 'y' or 'Y':
-                if data.junction is 'YRB':
+            if choice == 'y' or 'Y':
+                if data.junction == 'YRB':
                     print "Junction angle is too sharp to turn. Robot is going to keep straight.\n"
                     time.sleep(0.5)
                     motion_modes(0, None, NORMAL_DUTY_CYCLE)
-                elif data.junction is 'YRF':
+                elif data.junction == 'YRF':
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 45
                     motion_modes(4, turning_angle, None)
-                elif data.junction is 'TR':
+                elif data.junction == 'TR':
                     if data.dist_till_turn > DIST_TILL_TURN_90:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 90
                     motion_modes(4, turning_angle, None)
             else:
                 motion_modes(0, None, NORMAL_DUTY_CYCLE)
         elif data.junction_left is True and data.junction_right is False:
-            choice = input('Please input whether to turn right or not (Y/N): ')
+            choice = raw_input('Please input whether to turn right or not (Y/N): ')
             print '\n'
-            if choice is 'y' or 'Y':
-                if data.junction is 'YLB':
+            if choice == 'y' or 'Y':
+                if data.junction == 'YLB':
                     print "Junction angle is too sharp to turn. Robot is going to keep straight.\n"
                     time.sleep(0.5)
                     motion_modes(0, None, NORMAL_DUTY_CYCLE)
-                elif data.junction is 'YLF':
+                elif data.junction == 'YLF':
+                    print 'should '
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 45
                     motion_modes(3, turning_angle, None)
-                elif data.junction is 'TL':
+                elif data.junction == 'TL':
                     if data.dist_till_turn > DIST_TILL_TURN_90:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 90
                     motion_modes(3, turning_angle, None)
             else:
                 motion_modes(0, None, NORMAL_DUTY_CYCLE)
         else:
-            if data.junction is 'UR':
+            if data.junction == 'UR':
                 ujoint_turn_algorithm('right')
-            elif data.junction is 'UL':
+            elif data.junction == 'UL':
                 ujoint_turn_algorithm('left')
             else:
-                if data.junction is 'YTR':
+                if data.junction == 'YTR':
                     print "Robot can only turn left \n"
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 45
                     motion_modes(3, turning_angle, None)
-                elif data.junction is 'YTL':
+                elif data.junction == 'YTL':
                     print "Robot can only turn right \n"
                     if data.dist_till_turn > DIST_TILL_TURN_45:
                         motion_modes(0, None, SLOW_DUTY_CYCLE)
-                        break
+                        return
                     turning_angle = 45
                     motion_modes(4, turning_angle, None)
-                elif data.junction is 'TLR':
-                    choice = input('Please input whether to turn right or left (L/R): ')
+                elif data.junction == 'TLR':
+                    choice = raw_input('Please input whether to turn right or left (L/R): ')
                     print '\n'
                     turning_angle = 90
-                    if choice is 'L' or 'l':
+                    if choice == 'L' or 'l':
                         if data.dist_till_turn > DIST_TILL_TURN_90:
                             motion_modes(0, None, SLOW_DUTY_CYCLE)
-                            break
+                            return
                         turning_angle = 90
                         motion_modes(3, turning_angle, None)
                     else:
                         if data.dist_till_turn > DIST_TILL_TURN_90:
                             motion_modes(0, None, SLOW_DUTY_CYCLE)
-                            break
+                            return
                         turning_angle = 90
                         motion_modes(4, turning_angle, None)
