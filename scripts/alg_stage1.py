@@ -20,12 +20,12 @@ def alg_stage1(data, radians):
 	#Use the first and last point to find the horizontal distance
 	r_L0 = abs(data[numPoints-1][1]*math.cos(data[numPoints-1][0]))
 	r_R0 = abs(data[0][1]*math.cos(data[0][0]))
-	print 'r_L0:', r_L0, ', r_R0:', r_R0
+	#print 'r_L0:', r_L0, ', r_R0:', r_R0
 
 	#Calculate the tolerance value based on the horizontal distances and the angle increment
 	deltheta = data[1][0] - data[0][0]
 	tol = deltheta*(r_L0 + r_R0);
-	print 'tol:', tol
+	#print 'tol:', tol
 
 	#Sets the initial booleans
 	junction = [False, False]
@@ -55,9 +55,8 @@ def alg_stage1(data, radians):
 			else:
 				junction[1] = True
 
-	if junction[0] or junction[1]:
+	#if junction[0] or junction[1]:
 		#print 'Junction Detected'
-	else:
+	#else:
 		#print 'Straight Pipe Ahead'
-
 	return junction

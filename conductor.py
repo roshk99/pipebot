@@ -19,7 +19,6 @@ def main():
 
 	#Keep repeating while no errors
 	while not rospy.is_shutdown():
-	for i in range(1):
 		#Stage 1: General Sweeping
 
 		#Initialize motors moving straight
