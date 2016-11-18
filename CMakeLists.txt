@@ -12,18 +12,15 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## Generate messages in the 'msg' folder
-add_message_files(
-   FILES
-   sensorData.msg
-   sensorDetection.msg
-   accelData.msg
-)
+## add_message_files(
+##   FILES
+## )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES 
-  bodyMotorsSrv.srv
-  neckMotorsSrv.srv
+  servoSrv.srv
+  sensorSrv.srv
 )
 
 ## Generate added messages and services with any dependencies listed here
@@ -50,14 +47,14 @@ add_library(utilLib src/libs/util.cpp)
 # add_library(Adafruit BBIO lib)
 
 # Pipebot Nodes (C++)
-add_executable(conductor src/conductor.cpp)
-target_link_libraries(conductor ${catkin_LIBRARIES})
-add_dependencies(conductor pipebot_generate_messages_cpp)
+# add_executable(conductor src/conductor.cpp)
+# target_link_libraries(conductor ${catkin_LIBRARIES})
+# add_dependencies(conductor pipebot_generate_messages_cpp)
 
-add_executable(bodyMotors src/bodyMotors.cpp)
-target_link_libraries(bodyMotors ${catkin_LIBRARIES} DCMotorLib PWMLib GPIOLib utilLib)
-add_dependencies(bodyMotors pipebot_generate_messages_cpp)
+# add_executable(bodyMotors src/bodyMotors.cpp)
+# target_link_libraries(bodyMotors ${catkin_LIBRARIES} DCMotorLib PWMLib GPIOLib utilLib)
+# add_dependencies(bodyMotors pipebot_generate_messages_cpp)
 
-add_executable(neckMotors src/neckMotors.cpp)
-target_link_libraries(neckMotors ${catkin_LIBRARIES} PWMLib utilLib)
-add_dependencies(neckMotors pipebot_generate_messages_cpp)
+# add_executable(neckMotors src/neckMotors.cpp)
+# target_link_libraries(neckMotors ${catkin_LIBRARIES} PWMLib utilLib)
+# add_dependencies(neckMotors pipebot_generate_messages_cpp)

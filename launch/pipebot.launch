@@ -1,8 +1,5 @@
 <launch>
-  <node name="conductor" pkg="pipebot" type="conductor" output="screen" />
-  <node name="sensorPub" pkg="pipebot" type="sensorPub.py" output="screen" />
-  <node name="accelPub" pkg="pipebot" type="accelPub.py" output="screen" />
-  <node name="bodyMotors" pkg="pipebot" type="bodyMotors" output="screen" />
-  <node name="neckMotors" pkg="pipebot" type="neckMotors" output="screen" />
-  <node name="sensorServo" pkg="pipebot" type="sensorServo" output="screen" />
+  <node name="conductor" pkg="pipebot" type="conductor.py" output="screen" />
+  <node name="command_sensor_server" pkg="pipebot" type="command_sensor_server.py" output="screen" />
+  <node name="command_servo_server" pkg="pipebot" type="command_servo_server.py" output="screen" />
 </launch>

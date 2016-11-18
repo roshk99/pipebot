@@ -4,21 +4,20 @@ from pipebot.srv import *
 import rospy
 import Adafruit_BBIO.ADC as ADC
 import math
+import utils
 
 ADC.setup()
 sensorPin = "P9_39"
 
 def handle_command_sensor(req):
-    print 'Input', req.command
     arr = []
-    for i in range(40):
+    for i in range(15):
         sensor1 = ADC.read(sensorPin)
         arr.append(sensor1)
-    sensor_val = math.fsum(arr)/len(arr)*1000
-    print 'Sensor Value:', sensor_val
-    
+    sensor_val = math.fsum(arr)/len(arr)
+    distance_val = utils.voltage_to_distance(sensor_val)
     resp = sensorSrvResponse()
-    resp.voltage = float(sensor_val)
+    resp.voltage = float(distance_val)
     return resp
 
 def command_sensor_server():
