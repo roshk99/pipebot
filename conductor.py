@@ -30,10 +30,12 @@ def main():
 		print 'Data:'
 		if data:
 			print data
-			#utils.format_to_matlab(data)
-			junction = algorithm.algorithm(data, False)
-			print 'Junction Decision'
-			print junction
+			utils.format_to_matlab(data)
+			if MODE == 0 or MODE == 2:
+				#junction = algorithm.algorithm(data, True)
+				#print 'Junction Decision'
+				#print junction
+				pass
 		else:
 			print 'No Raw Data'
 

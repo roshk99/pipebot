@@ -27,27 +27,19 @@ def mode_select(mode):
 		angle_range = [single_angle]
     else:
 		angle_range = angle_range_generate(MIN_ANGLE, MAX_ANGLE, DELTHETA)
-    return angle_range 
+    return angle_range
 
 def required_to_commanded_angle(required_angle):
     return 180 - (required_angle + 25)
-
-def required_to_expected_feedback(required_angle):
-    a = 0.00002
-    b = -0.0035
-    c = 0.9759
-    d = 1.8461
-    actual_angle = a*(required_angle**3) + b*(required_angle**2) + c*(required_angle) + d
-    return actual_angle + 14
     
 #the servo voltage to angle feedback conversion function 
 def voltage_to_feedback(voltage):
-    a = -3.013
-    b = 59.117
-    c = -242.67
-    d = 209.85
+    a = 8.9758
+    b = 59.312
+    c = -259.201
+    d = 227.342
     feedback = a*(voltage**3) + b*(voltage**2) + c*(voltage) + d
-    return feedback + 14.0
+    return feedback
     
 def voltage_to_distance(voltage):
     a = -0.2113
