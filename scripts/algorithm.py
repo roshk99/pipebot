@@ -2,6 +2,7 @@ import numpy as np
 import random
 import math
 #import matplotlib.pyplot as plt
+from scipy import interpolate
 
 initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]),np.array([0, 20]),np.array([-10, 20]),np.array([10, 20]) ]
 #initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]), np.array([0, 20])]
@@ -71,10 +72,10 @@ def plot_data(data):
 
     print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
 
-def sort_left_to_right(labels):
+def sort_left_to_right(labels, clusters_to_use):
     sorted_ind = []
     for label in labels:
-        if label not in sorted_ind:
+        if label not in sorted_ind and label in clusters_to_use:
             sorted_ind.append(label)
     sorted_ind = list(reversed(sorted_ind))
     return sorted_ind
@@ -104,36 +105,45 @@ def stage_1(mu, clusters, labels):
     clusters_yl = []
     slopes = []
     intercepts = []
+    clusters_to_use = []
     for cluster_num, cluster_values in clusters.items():
         xd = []
         yd = []
         for arr in cluster_values:
             xd.append(arr[0])
             yd.append(arr[1])
-        
-        A = np.vstack([xd, np.ones(len(xd))]).T
-        slope, intercept = np.linalg.lstsq(A,yd)[0]
+        if len(xd) > 2:
+            t = range(len(xd))
+            xd = list(interpolate.UnivariateSpline(t, xd, k=1)(t))
+            yd = list(interpolate.UnivariateSpline(t, yd, k=1)(t))
+            
+            #f = interpolate.interp1d(xd, yd, kind='linear')
+            #ynew = f(xd)
+            #yd = list(ynew)
 
-        xl = list(np.linspace(min(xd), max(xd), 30))
-        yl = [slope*xx + intercept for xx in xl]
-        
-        yl2 = list(np.linspace(min(yd), max(yd), 30))
-        xl2 = [(yy - intercept)/slope for yy in yl2]
-        #print min(xd), max(xd), min(yd), max(yd)
+            A = np.vstack([xd, np.ones(len(xd))]).T
+            slope, intercept = np.linalg.lstsq(A,yd)[0]
 
-        clusters_x.append(xd)
-        clusters_y.append(yd)
-        #clusters_xl.append(xl + xl2)
-        #clusters_yl.append(yl + yl2)
-        clusters_xl.append(xl)
-        clusters_yl.append(yl)
-        slopes.append(slope)
-        intercepts.append(intercept)
-        
-    #Split into left, right, middle
+            xl = list(np.linspace(min(xd), max(xd), 30))
+            yl = [slope*xx + intercept for xx in xl]
+            
+            yl2 = list(np.linspace(min(yd), max(yd), 30))
+            xl2 = [(yy - intercept)/slope for yy in yl2]
+            #print min(xd), max(xd), min(yd), max(yd)
+
+            clusters_x.append(xd)
+            clusters_y.append(yd)
+            #clusters_xl.append(xl + xl2)
+            #clusters_yl.append(yl + yl2)
+            clusters_xl.append(xl)
+            clusters_yl.append(yl)
+            slopes.append(slope)
+            intercepts.append(intercept)
+            clusters_to_use.append(cluster_num)
+
     cluster_num = len(slopes)
-    sorted_ind = sort_left_to_right(labels)
-
+    sorted_ind = sort_left_to_right(labels, clusters_to_use)
+    print len(slopes), len(sorted_ind)
     #print 'SLOPES', slopes
     #print 'sorted_indx', sorted_ind
     sorted_slopes = []
