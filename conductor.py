@@ -9,6 +9,8 @@ from scripts import utils, algorithm
 import math 
 import time
 
+ADJUSTMENT = False
+
 def main():
 	rospy.init_node("conductor")
 	MODE = 2
@@ -26,11 +28,16 @@ def main():
 		#Get data for a range of angles
 		angle_range = utils.mode_select(MODE)
 		
-		data = collect_data.collect_data(angle_range)
-		print 'Data:'
+		[data, original_data] = collect_data.collect_data(angle_range)
+
+		if not MODE == 1 and ADJUSTMENT:
+			data2 = utils.data_adjustment(data, original_data)
+		else:
+			data2 = data
+		
 		if data:
-			print data
-			utils.format_to_matlab(data)
+			print 'Data:', data2
+			utils.format_to_matlab(data2)
 			if MODE == 0 or MODE == 2:
 				#junction = algorithm.algorithm(data, True)
 				#print 'Junction Decision'

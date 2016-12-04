@@ -6,7 +6,7 @@ from scipy import interpolate
 
 initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]),np.array([0, 20]),np.array([-10, 20]),np.array([10, 20]) ]
 #initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]), np.array([0, 20])]
-TOL1 = 2 #vertical slope
+TOL1 = 2.4 #vertical slope
 TOL2 = 0.5 
 TOL3 = 0.3 #horizontal slope
 VERT_SLOPE = 5
@@ -167,7 +167,7 @@ def stage_1(mu, clusters, labels):
     cluster_num = len(clusters_xd)
     #print 'Clusters Used:', cluster_num
 
-    if cluster_num not in [5, 6, 7]:
+    if cluster_num not in [4, 5, 6, 7]:
         print 'Error occurred'
         print 'Only', cluster_num, ' clusters created'
         return False
@@ -222,7 +222,20 @@ def stage_1(mu, clusters, labels):
             junction_left = True
             junction_right = True
             #print 'Rule3'
-
+    if cluster_num == 4:
+                #Check Left Wall straight
+        if not is_vertical(slopes[0]):
+            junction_left = True
+            #print 'Rule1'
+        #Check Right Wall straight
+        if not is_vertical(slopes[3]):
+            junction_right = True
+            #print 'Rule2'
+        #Check Front not straight
+        if (not is_max_dist(mus_x[2], mus_y[2]) and is_horizontal(slopes[2])) or (not is_max_dist(mus_x[1], mus_y[1]) and is_horizontal(slopes[1])):
+            junction_left = True
+            junction_right = True
+            #print 'Rule3'
     return ([mus_x, mus_y, clusters_xd, clusters_yd, clusters_xl, clusters_yl, slopes], [junction_left, junction_right])
 
 def algorithm(data, plot_bool):

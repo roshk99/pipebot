@@ -42,6 +42,7 @@ def collect_data(angle_range):
     print "Ready to collect data"
     t = time.time()
     data = []
+
     for angle in angle_range:
         feedback_angle = command_servo(angle)
         distance = command_sensor()
@@ -61,8 +62,13 @@ def collect_data(angle_range):
             y = distance*math.sin(angle*math.pi/180.0) - right_point[1]
             xnew = x*math.cos(ROTATION_ANGLE_R) - y*math.sin(ROTATION_ANGLE_R) + right_point[0]
             ynew = y*math.cos(ROTATION_ANGLE_R) + x*math.sin(ROTATION_ANGLE_R) + right_point[1]
-        
+            if angle < 46:
+                xnew -= 1
         else:
+            # if angle > 98 and angle < 117:
+            #     adjust = -8./math.cos(angle*math.pi/180.) - 20.
+            #     if adjust >= 0:
+            #         distance += math.sqrt(adjust)
             x = distance*math.cos(angle*math.pi/180.0) - left_point[0]
             y = distance*math.sin(angle*math.pi/180.0) - left_point[1]
             xnew = x*math.cos(ROTATION_ANGLE_L) - y*math.sin(ROTATION_ANGLE_L) + left_point[0]
@@ -72,8 +78,8 @@ def collect_data(angle_range):
         new_distance = math.sqrt(xnew**2 + ynew**2)
         if new_angle < 0:
             new_angle = new_angle + 180.0
-        new_data.append((new_angle, new_distance))
         
+        new_data.append((new_angle, new_distance))
     elapsed_time = time.time() - t
     print 'Data collection took', elapsed_time, 'secs'
-    return new_data
+    return [new_data, data]
