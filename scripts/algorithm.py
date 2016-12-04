@@ -6,13 +6,12 @@ from scipy import interpolate
 
 initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]),np.array([0, 20]),np.array([-10, 20]),np.array([10, 20]) ]
 #initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]), np.array([0, 20])]
-TOL1 = 3
-TOL2 = 1
-TOL3 = 5
-TOL4 = 0.5 #vertical slope
-TOL4 = 0.3 #horizontal slope
-TOL5 = 0.5 #equality
-VERT_SLOPE = 1.5
+TOL1 = 2 #vertical slope
+TOL2 = 0.5 
+TOL3 = 0.3 #horizontal slope
+VERT_SLOPE = 5
+DIST_TOL = 8
+MAX_DIST = 40
 K = len(initial_guess)
 
 def cluster_points(X, mu):
@@ -72,137 +71,159 @@ def plot_data(data):
 
     print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
 
-def sort_left_to_right(labels, clusters_to_use):
-    sorted_ind = []
-    for label in labels:
-        if label not in sorted_ind and label in clusters_to_use:
-            sorted_ind.append(label)
-    sorted_ind = list(reversed(sorted_ind))
-    return sorted_ind
-
 def is_vertical(slope):
-    return slope - VERT_SLOPE - TOL3 > 0
+    return abs(slope) + TOL1 > VERT_SLOPE
 def is_horizontal(slope):
-    return abs(slope) < TOL4
-def is_parallel(slope1, slope2):
-    return abs(slope1 - slope2) < TOL5
+    return abs(slope) < TOL2
+def is_max_dist(x,y):
+    return math.sqrt(x**2 + y**2) >= MAX_DIST - TOL3
+
+def get_cluster_num_map(labels, clusters):
+    num_points = []
+    for i in range(len(clusters)):
+        num_points.append(len(clusters[i]))
+
+    mapping = {}
+    order = 0
+    for label in labels:
+        if label not in mapping.keys() and num_points[label] > 2:
+            mapping[label] = order
+            order +=1
+    reversed_mapping = {}
+    total_num = len(mapping.keys())
+    for key, value in mapping.items():
+        reversed_mapping[key] = total_num - value - 1
+
+    return reversed_mapping
+
+def process_data(x_raw, y_raw):
+    mu_x = sum(x_raw)/float(len(x_raw))
+    mu_y = sum(y_raw)/float(len(y_raw))
+    xd = []
+    yd = []
+    for x,y in zip(x_raw, y_raw):
+        dist = math.sqrt((x-mu_x)**2 + (y-mu_y)**2)
+        if dist < DIST_TOL:
+            xd.append(x)
+            yd.append(y)
+    t = range(len(xd))
+    xd = list(interpolate.UnivariateSpline(t, xd, k=1)(t))
+    yd = list(interpolate.UnivariateSpline(t, yd, k=1)(t))
+    #yd = list(interpolate.UnivariateSpline(xd, yd, k=1)(xd))
+    return xd, yd
 
 def stage_1(mu, clusters, labels):
-    #Create numpy array
-    mu_x = []
-    mu_y = []
-    for arr in mu:
-        mu_x.append(arr[0])
-        mu_y.append(arr[1])
-    mu_arr = np.array([mu_x, mu_y])
 
-    junction_left = False
-    junction_right = False
-    
-    clusters_x = []
-    clusters_y = []
+    #Match cluster number and left-to-right order
+    cluster_num_map = get_cluster_num_map(labels, clusters)
+
+    #Initialize arrays
+    mus_x = []
+    mus_y = []
+    clusters_xd = []
+    clusters_yd = []
     clusters_xl = []
     clusters_yl = []
-    slopes = []
-    intercepts = []
-    clusters_to_use = []
-    for cluster_num, cluster_values in clusters.items():
-        xd = []
-        yd = []
-        for arr in cluster_values:
-            xd.append(arr[0])
-            yd.append(arr[1])
-        if len(xd) > 2:
-            t = range(len(xd))
-            xd = list(interpolate.UnivariateSpline(t, xd, k=1)(t))
-            yd = list(interpolate.UnivariateSpline(t, yd, k=1)(t))
-            
-            #f = interpolate.interp1d(xd, yd, kind='linear')
-            #ynew = f(xd)
-            #yd = list(ynew)
+    slopes = {}
 
+    #For each cluster
+    for i in range(len(mu)):
+        #Check if number of points in cluster is more than 2
+        num_points = len(clusters[i])
+        if num_points > 2:
+
+            #Smooth individual x and y data linearly
+            xd = []
+            yd = []
+            for arr in clusters[i]:
+                xd.append(arr[0])
+                yd.append(arr[1])
+            xd, yd = process_data(xd, yd)
+
+            #Get the slope for the cluster
             A = np.vstack([xd, np.ones(len(xd))]).T
             slope, intercept = np.linalg.lstsq(A,yd)[0]
 
+            #Append slope in appropriate place
+            slopes[cluster_num_map[i]] = slope
+
+            #Create vectors for plotting
             xl = list(np.linspace(min(xd), max(xd), 30))
             yl = [slope*xx + intercept for xx in xl]
-            
             yl2 = list(np.linspace(min(yd), max(yd), 30))
             xl2 = [(yy - intercept)/slope for yy in yl2]
-            #print min(xd), max(xd), min(yd), max(yd)
+            mu_x = mu[i][0]
+            mu_y = mu[i][1]
 
-            clusters_x.append(xd)
-            clusters_y.append(yd)
-            #clusters_xl.append(xl + xl2)
-            #clusters_yl.append(yl + yl2)
-            clusters_xl.append(xl)
-            clusters_yl.append(yl)
-            slopes.append(slope)
-            intercepts.append(intercept)
-            clusters_to_use.append(cluster_num)
+            #Store Values
+            clusters_xd.append(xd)
+            clusters_yd.append(yd)
+            clusters_xl.append(xl + xl2)
+            clusters_yl.append(yl + yl2)
+            mus_x.append(np.mean(xd))
+            mus_y.append(np.mean(yd))
 
-    cluster_num = len(slopes)
-    sorted_ind = sort_left_to_right(labels, clusters_to_use)
-    print len(slopes), len(sorted_ind)
-    #print 'SLOPES', slopes
-    #print 'sorted_indx', sorted_ind
-    sorted_slopes = []
-    for j in range(len(slopes)):
-        sorted_slopes.append(slopes[sorted_ind[j]])
-    #print 'Sorted Slopes', sorted_slopes
-
+    #Get number of clusters used
+    cluster_num = len(clusters_xd)
     #print 'Clusters Used:', cluster_num
 
     if cluster_num not in [5, 6, 7]:
         print 'Error occurred'
         print 'Only', cluster_num, ' clusters created'
         return False
-    
+    #print 'Slopes', slopes
+    junction_left = False
+    junction_right = False
     if cluster_num == 7:
         #Check Left Wall straight
-        if not is_vertical(sorted_slopes[1]) or not is_vertical(sorted_slopes[2]):
+        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
             junction_left = True
             #print 'Rule1'
         #Check Right Wall straight
-        if not is_vertical(sorted_slopes[4]) or not is_vertical(sorted_slopes[5]):
+        if not is_vertical(slopes[5]) or not is_vertical(slopes[6]):
             junction_right = True
             #print 'Rule2'
         #Check Front not straight
-        if is_horizontal(sorted_slopes[3]) and is_horizontal(sorted_slopes[4]):
+        if not is_max_dist(mus_x[4], mus_y[4]) and is_horizontal(slopes[4]):
             junction_left = True
             junction_right = True
             #print 'Rule3'
     if cluster_num == 5:
         #Check Left Wall straight
-        if not is_vertical(sorted_slopes[0]) or not is_vertical(sorted_slopes[1]):
+        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
             junction_left = True
             #print 'Rule1'
         #Check Right Wall straight
-        if not is_vertical(sorted_slopes[3]) or not is_vertical(sorted_slopes[4]):
+        if not is_vertical(slopes[3]) or not is_vertical(slopes[4]):
             junction_right = True
             #print 'Rule2'
         #Check Front not straight
-        if is_horizontal(sorted_slopes[1]) and is_horizontal(sorted_slopes[3]):
+        if not is_max_dist(mus_x[2], mus_y[2])and is_horizontal(slopes[2]):
             junction_left = True
             junction_right = True
             #print 'Rule3'
     if cluster_num == 6:
+        #Fixes unknown error
+        slope_right = slopes[4]
+        slope_left = slopes[5]
+        slopes[4] = slope_left
+        slopes[5] = slope_right
+
         #Check Left Wall straight
-        if not is_vertical(sorted_slopes[0]) or not is_vertical(sorted_slopes[1]):
+        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
             junction_left = True
             #print 'Rule1'
         #Check Right Wall straight
-        if not is_vertical(sorted_slopes[4]) or not is_vertical(sorted_slopes[5]):
+        if not is_vertical(slopes[5]) or not is_vertical(slopes[4]):
             junction_right = True
             #print 'Rule2'
         #Check Front not straight
-        if is_horizontal(sorted_slopes[2]) and is_horizontal(sorted_slopes[3]):
+        if (not is_max_dist(mus_x[2], mus_y[2]) and is_horizontal(slopes[2])) or (not is_max_dist(mus_x[3], mus_y[3]) and is_horizontal(slopes[3])):
             junction_left = True
             junction_right = True
             #print 'Rule3'
 
-        
-    return ([mu_x, mu_y, clusters_x, clusters_y, clusters_xl, clusters_yl, slopes, intercepts], [junction_left, junction_right])
+    return ([mus_x, mus_y, clusters_xd, clusters_yd, clusters_xl, clusters_yl, slopes], [junction_left, junction_right])
 
 def algorithm(data, plot_bool):
     x = []
