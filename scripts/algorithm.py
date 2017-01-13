@@ -1,38 +1,252 @@
 import numpy as np
 import random
 import math
-#import matplotlib.pyplot as plt
 from scipy import interpolate
 
 initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]),np.array([0, 20]),np.array([-10, 20]),np.array([10, 20]) ]
-#initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]), np.array([0, 20])]
-TOL1 = 2.4 #vertical slope
-TOL2 = 0.5 
-TOL3 = 0.3 #horizontal slope
-VERT_SLOPE = 5
-DIST_TOL = 8
-MAX_DIST = 40
-K = len(initial_guess)
+K = 7
+MIN_CLUSTER_SIZE = 3
+SMOOTH = True
+OUTLIER_REMOVAL = True
+OUTLIER_MAX_DIST = 8
+VERT_TOL = 1
+VERT_SLOPE = 8
+SPLINE_ORDER = 5
+SMOOTHING_DEGREE = 0.5
+LEFT_ANGLE1 = 155
+LEFT_ANGLE2 = 105
+RIGHT_ANGLE1 = 75
+RIGHT_ANGLE2 = 25
 
-def cluster_points(X, mu):
-    clusters  = {}
-    labels = []
-    for x in X:
-        bestmukey = min([(i[0], np.linalg.norm(x-mu[i[0]])) \
-                    for i in enumerate(mu)], key=lambda t:t[1])[0]
-        try:
-            clusters[bestmukey].append(x)
-        except KeyError:
-            clusters[bestmukey] = [x]
-        labels.append(bestmukey)
-    return clusters, labels
- 
-def reevaluate_centers(mu, clusters):
-    newmu = []
-    keys = sorted(clusters.keys())
-    for k in keys:
-        newmu.append(np.mean(clusters[k], axis = 0))
-    return newmu
+class Cluster:
+	def __init__(self, id_val, x, y):
+		self.id = id_val
+		self.mu = [x,y]
+	def __str__(self):
+		s = "Id: {0}, Mean: [{1}, {2}]".format(self.id, self.mu[0], self.mu[1])
+		return s
+	def get_id(self):
+		return self.id
+	def get_mu(self):
+		return list(self.mu)
+	def update_mean(self, x, y):
+		self.mu = [x,y]
+
+
+class DataPoint:
+	def __init__(self, id_val, x, y, angle):
+		self.id = id_val
+		self.coordinates = [x, y]
+		self.cluster = None
+		self.angle = angle
+		self.slope = None
+		self.smoothed_coordinates = [None, None]
+	def __str__(self):
+		s = "Id: {0}, Angle: {4}, Coordinates: [{1}, {2}], Cluster_Id: {3}, Slope: {5}".format(self.id, self.coordinates[0], self.coordinates[1], self.cluster, self.angle, self.slope)
+		return s
+	def get_id(self):
+		return self.id
+	def get_coordinates(self):
+		return list(self.coordinates)
+	def get_cluster(self):
+		return self.cluster
+	def set_cluster(self, cluster):
+		self.cluster = cluster
+	def get_angle(self):
+		return self.angle
+	def add_slope(self, slope):
+		self.slope = slope
+	def add_smoothed_coordinates(self, x, y):
+		self.smoothed_coordinates = [x,y]
+	def get_smoothed_coordinates(self):
+		return list(self.smoothed_coordinates)
+	def get_slope(self):
+		return self.slope
+
+
+class Clusters:
+	def __init__(self):
+		self.clusters = {}
+	def __str__(self):
+		s = ""
+		for cluster in self.clusters.values():
+			s = "{0}, [{1}]".format(s, str(cluster))
+		return s
+	def cluster_added(self, cluster_id):
+		return cluster_id in self.clusters.keys()
+	def add_cluster(self, cluster):
+		if cluster.get_id() not in self.clusters.keys():
+			self.clusters[cluster.get_id()] = cluster
+		else:
+			print 'Replacing a Cluster'
+			self.clusters[cluster.get_id()] = cluster
+	def get_clusters(self):
+		return list(self.clusters.values())
+	def formatted_clusters(self):
+		s = ""
+		for cluster in self.clusters.values():
+			mu = cluster.get_mu()
+			s = "{0}, [{1}, {2}]".format(s, mu[0], mu[1])
+		return s
+	def get_cluster_ids(self):
+		return list(self.clusters.keys())
+	def remove_cluster(self, cluster_id):
+		self.clusters.pop(cluster_id)
+	def get_cluster(self, cluster_id):
+		return self.clusters[cluster_id]
+
+
+class DataPoints:
+	def __init__(self):
+		self.points = {}
+	def __str__(self):
+		s = ""
+		for point in self.points.values():
+			s = "{0}, [{1}]".format(s, str(point))
+		return s
+	def get_points_array(self):
+		x = []
+		y = []
+		for point in self.points.values():
+			coordinates = point.get_coordinates()
+			x.append(coordinates[0])
+			y.append(coordinates[1])
+		point_arr = np.concatenate((np.array([x]), np.array([y])), axis=0).T
+		return point_arr
+	def add_point(self, point):
+		if point.get_id() not in self.points.keys():
+			self.points[point.get_id()] = point
+		else:
+			print 'Replacing a Point'
+			self.points[point.get_id()] = point
+	def remove_point(self, point):
+		if point.get_id in self.points.keys():
+			self.points.pop(point.get_id())
+	def get_points(self):
+		return list(self.points.values())
+	def find_cluster(self, point_id, mu):
+		point = self.points[point_id]
+		coordinates = np.array(point.get_coordinates())
+	 	mu_key_arr = []
+	 	for i in enumerate(mu):
+	 		if mu[i[0]][0] is not None:
+	 			mu_key_arr.append(np.linalg.norm(coordinates-mu[i[0]]))
+ 			else:
+ 				mu_key_arr.append(None)
+		bestmukey = np.argmin(np.array(mu_key_arr))
+	 	return bestmukey
+ 	def get_cluster_points(self, cluster_id):
+ 		cluster_points = []
+ 		for point in self.points.values():
+ 			if point.get_cluster() == cluster_id:
+ 				cluster_points.append(point)
+		return cluster_points
+	def cluster_points_str(self, cluster_id):
+		cluster_points = self.get_cluster_points(cluster_id)
+		s = ""
+		for point in cluster_points:
+			coordinates = point.get_coordinates()
+			s = "{0}, [{1},{2}]".format(s, coordinates[0], coordinates[1])
+		return s
+	def remove_cluster(self, cluster_id):
+		cluster_points = self.get_cluster_points(cluster_id)
+		for point in cluster_points:
+			self.remove_point(point)
+	def add_smoothed_coordinates(self, point_id, x, y):
+		point = self.points[point_id]
+		point.add_smoothed_coordinates(x, y)
+	def get_ordered_points(self):
+		points = []
+		for key in sorted(self.points.keys()):
+			points.append(self.points[key])
+		return points
+	def add_slope(self, point_id, slope):
+		point = self.points[point_id]
+		point.add_slope(slope)
+	def assign_slopes(self, cluster_id, outlier_removal=True, spline_order=3, smoothing_degree=0.3):
+		cluster_points = self.get_cluster_points(cluster_id)
+		x_raw = []
+		y_raw = []
+		id_raw = []
+		for point in cluster_points:
+			coordinates = point.get_coordinates()
+			x_raw.append(coordinates[0])
+			y_raw.append(coordinates[1])
+			id_raw.append(point.get_id())
+		mu_x = sum(x_raw)/float(len(x_raw))
+		mu_y = sum(y_raw)/float(len(y_raw))
+		# if outlier_removal:
+		# 	x_o = []
+		# 	y_o = []
+		# 	for x,y,id_val in zip(x_raw,y_raw,id_raw):
+		# 		dist = math.sqrt((x-mu_x)**2 + (y-mu_y)**2)
+		# 		if dist < OUTLIER_MAX_DIST:
+		# 			x_o.append(x)
+		# 			y_o.append(y)
+		# 		else:
+		# 			self.remove_point(self.points[id_val])
+		# 	x_raw = x_o
+		# 	y_raw = y_o
+		
+		#Sort
+		x_raw = np.array(x_raw)
+		y_raw = np.array(y_raw)
+		id_raw = np.array(id_raw)
+		sorted_idxs = np.argsort(x_raw)
+		x_raw = x_raw[sorted_idxs]
+		y_raw = y_raw[sorted_idxs]
+		id_raw = id_raw[sorted_idxs]
+
+		tck = interpolate.splrep(x_raw, y_raw, k=min(spline_order, len(x_raw)-1), s=smoothing_degree)
+		x_new = x_raw
+		y_new = interpolate.splev(x_new, tck)
+		y_new_der = interpolate.splev(x_new, tck, der=1)
+
+		for ii in range(len(id_raw)):
+			self.add_slope(id_raw[ii], y_new_der[ii])
+			self.add_smoothed_coordinates(id_raw[ii], x_new[ii], y_new[ii])
+
+
+def deg_to_rad(deg):
+	return deg*math.pi/180.0
+
+
+def rad_to_deg(rad):
+	return rad*180.0/math.pi
+
+
+def find_cluster_mean(points):
+	x = []
+	y = []
+	for point in points:
+		coordinates = point.get_coordinates()
+		x.append(coordinates[0])
+		y.append(coordinates[1])
+	return np.mean(x), np.mean(y)
+
+
+def cluster_points(data_points, clusters, mu):
+	for point in data_points.get_points():
+		cluster_id = data_points.find_cluster(point.get_id(), mu)
+		if not clusters.cluster_added(cluster_id) and not cluster_id == None:
+			cluster = Cluster(cluster_id, mu[cluster_id][0], mu[cluster_id][1])
+			clusters.add_cluster(cluster)
+		point.set_cluster(cluster_id)
+	return clusters
+
+
+def reevaluate_centers(data_points, clusters, mu):
+	newmu = []
+	for cluster in clusters.get_clusters():
+		cluster_points = data_points.get_cluster_points(cluster.get_id())
+		if len(cluster_points) > 0:
+			mu_x, mu_y = find_cluster_mean(cluster_points)
+			cluster.update_mean(mu_x, mu_y)
+			newmu.append(np.array([mu_x, mu_y]))
+		else:
+			newmu.append(np.array([None, None]))
+
+	return newmu
  
 def has_converged(mu, oldmu):
     list1 = []
@@ -42,219 +256,121 @@ def has_converged(mu, oldmu):
         list2.append(tuple(a2))
     return set(list1) == set(list2)
 
-def find_centers(X, K):
-    # Initialize to K random centers
-    oldmu = random.sample(X, K)
-    mu = initial_guess
-    while not has_converged(mu, oldmu):
-        oldmu = mu
-        # Assign all points in X to clusters
-        clusters, labels = cluster_points(X, mu)
-        # Reevaluate centers
-        mu = reevaluate_centers(oldmu, clusters)
-    return(mu, clusters, labels)
 
-def deg_to_rad(angle):
-    return math.pi*angle/180.0
+def find_centers(data_points, clusters, K):
+	X = data_points.get_points_array()
 
-def plot_data(data):
-    colors=[255,0,0], [255,127,0], [0,255,0], [0,255,255], [0,0,255],[127,0,255], [255,0,255]
+	# Initialize to K random centers
+	oldmu = random.sample(X, K)
+	mu = initial_guess
+	while not has_converged(mu, oldmu):
+		oldmu = mu
+		# Assign all points in X to clusters
+		cluster_points(data_points, clusters, mu)
+		# Reevaluate centers
+		mu = reevaluate_centers(data_points, clusters, oldmu)
+	return data_points, clusters
 
-    print 'FOR MATLAB'
-    print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
-    print 'close all; clc;'
-    print 'mu_x=', data[0], '; mu_y=', data[1], "; plot(mu_x, mu_y, 'k.', 'MarkerSize', 30); hold on;"
-    for i in range(len(data[2])):
-        print "plot(", data[2][i], ",", data[3][i], ", '.', 'Color', ", colors[i], "./255, 'MarkerSize', 20);"
-        print "plot(", data[4][i], ",", data[5][i], ",'Color', ", colors[i], "./255, 'Linewidth', 2);"
-    print "hold off;axis square; axis equal;"
 
-    print '+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++'
+def process_data(data_points, clusters):
+	for cluster_id in clusters.get_cluster_ids():
+		cluster_points = data_points.get_cluster_points(cluster_id)
+		if len(cluster_points) < MIN_CLUSTER_SIZE:
+			data_points.remove_cluster(cluster_id)
+			clusters.remove_cluster(cluster_id)
+		else:
+			data_points.assign_slopes(cluster_id, OUTLIER_REMOVAL, SPLINE_ORDER, SMOOTHING_DEGREE)
+
+
+def get_slope_vec(data_points):
+	slopes = {}
+	for point in data_points.get_points():
+		slope = point.get_slope()
+		angle = point.get_angle()
+		slopes[angle] = slope
+	return slopes
+
 
 def is_vertical(slope):
-    return abs(slope) + TOL1 > VERT_SLOPE
-def is_horizontal(slope):
-    return abs(slope) < TOL2
-def is_max_dist(x,y):
-    return math.sqrt(x**2 + y**2) >= MAX_DIST - TOL3
+	return abs(slope) + VERT_TOL > VERT_SLOPE
 
-def get_cluster_num_map(labels, clusters):
-    num_points = []
-    for i in range(len(clusters)):
-        num_points.append(len(clusters[i]))
 
-    mapping = {}
-    order = 0
-    for label in labels:
-        if label not in mapping.keys() and num_points[label] > 2:
-            mapping[label] = order
-            order +=1
-    reversed_mapping = {}
-    total_num = len(mapping.keys())
-    for key, value in mapping.items():
-        reversed_mapping[key] = total_num - value - 1
+def coarse_classification(data_points, clusters):
+	slopes = get_slope_vec(data_points)
+	junction_right = False
+	junction_left = False
 
-    return reversed_mapping
+	for angle, slope in slopes.items():
+		if slope:
+			if angle < deg_to_rad(RIGHT_ANGLE1) and angle > deg_to_rad(RIGHT_ANGLE2):
+				if not is_vertical(slope):
+					junction_right = True
+			elif angle < deg_to_rad(LEFT_ANGLE1) and angle > deg_to_rad(LEFT_ANGLE2):
+				if not is_vertical(slope):
+					junction_left = True
+			#print angle*180/math.pi, slope
+	return [junction_left, junction_right]
 
-def process_data(x_raw, y_raw):
-    mu_x = sum(x_raw)/float(len(x_raw))
-    mu_y = sum(y_raw)/float(len(y_raw))
-    xd = []
-    yd = []
-    for x,y in zip(x_raw, y_raw):
-        dist = math.sqrt((x-mu_x)**2 + (y-mu_y)**2)
-        if dist < DIST_TOL:
-            xd.append(x)
-            yd.append(y)
-    t = range(len(xd))
-    xd = list(interpolate.UnivariateSpline(t, xd, k=1)(t))
-    yd = list(interpolate.UnivariateSpline(t, yd, k=1)(t))
-    #yd = list(interpolate.UnivariateSpline(xd, yd, k=1)(xd))
-    return xd, yd
 
-def stage_1(mu, clusters, labels):
+def generate_matlab_plot(data_points):
+	x = []
+	y = []
+	x_smooth = []
+	y_smooth = []
+	for point in data_points.get_points():
+		coordinates = point.get_coordinates()
+		smoothed_coordinates = point.get_smoothed_coordinates()
+		x.append(coordinates[0])
+		y.append(coordinates[1])
+		x_smooth.append(smoothed_coordinates[0])
+		y_smooth.append(smoothed_coordinates[1])
 
-    #Match cluster number and left-to-right order
-    cluster_num_map = get_cluster_num_map(labels, clusters)
+	print 'x=', x, ';y=', y, ';x_smooth=', x_smooth, ';y_smooth=', y_smooth, ";plot(x,y,'.b', 'MarkerSize', 20);hold on; plot(x_smooth,y_smooth, 'r');hold off; axis square; axis equal;"
 
-    #Initialize arrays
-    mus_x = []
-    mus_y = []
-    clusters_xd = []
-    clusters_yd = []
-    clusters_xl = []
-    clusters_yl = []
-    slopes = {}
 
-    #For each cluster
-    for i in range(len(mu)):
-        #Check if number of points in cluster is more than 2
-        num_points = len(clusters[i])
-        if num_points > 2:
+def fine_classification_left(data_points, clusters):
+	angles = []
+	slopes = []
+	for point in data_points.get_points():
+		angle = point.get_angle()
+		slope = point.get_slope()
+		if angle < deg_to_rad(LEFT_ANGLE1) and angle > deg_to_rad(LEFT_ANGLE2):
+			angles.append(rad_to_deg(angle))
+			slopes.append(slope)
+	idxs = np.argsort(angles)
+	angles = list(np.array(angles)[idxs])
+	slopes = list(np.array(slopes)[idxs])
 
-            #Smooth individual x and y data linearly
-            xd = []
-            yd = []
-            for arr in clusters[i]:
-                xd.append(arr[0])
-                yd.append(arr[1])
-            xd, yd = process_data(xd, yd)
 
-            #Get the slope for the cluster
-            A = np.vstack([xd, np.ones(len(xd))]).T
-            slope, intercept = np.linalg.lstsq(A,yd)[0]
+def fine_classification_right(data_points, clusters):
+	pass
 
-            #Append slope in appropriate place
-            slopes[cluster_num_map[i]] = slope
 
-            #Create vectors for plotting
-            xl = list(np.linspace(min(xd), max(xd), 30))
-            yl = [slope*xx + intercept for xx in xl]
-            yl2 = list(np.linspace(min(yd), max(yd), 30))
-            xl2 = [(yy - intercept)/slope for yy in yl2]
-            mu_x = mu[i][0]
-            mu_y = mu[i][1]
+def fine_classification_both(data_points, clusters):
+	pass
 
-            #Store Values
-            clusters_xd.append(xd)
-            clusters_yd.append(yd)
-            clusters_xl.append(xl + xl2)
-            clusters_yl.append(yl + yl2)
-            mus_x.append(np.mean(xd))
-            mus_y.append(np.mean(yd))
 
-    #Get number of clusters used
-    cluster_num = len(clusters_xd)
-    #print 'Clusters Used:', cluster_num
+def algorithm(data, plot=False, debug=False):
+	data_points = DataPoints()
+	clusters = Clusters()
+	i = 0
+	for angle, distance in data:
+		x = distance*math.cos(deg_to_rad(angle))
+		y = distance*math.sin(deg_to_rad(angle))
+		point = DataPoint(i, x, y, deg_to_rad(angle))
+		data_points.add_point(point)
+		i += 1
+	find_centers(data_points, clusters, K)
+	process_data(data_points, clusters)
+	coarse_junction = coarse_classification(data_points, clusters)
+	if coarse_junction[0] and not coarse_junction[1]:
+		fine_classification_left(data_points, clusters)
+	elif not coarse_junction[0] and coarse_junction[1]:
+		fine_classification_right(data_points, clusters)
+	else:
+		fine_classification_both(data_points, clusters)
+	if plot:
+		generate_matlab_plot(data_points)
+	return coarse_junction
 
-    if cluster_num not in [4, 5, 6, 7]:
-        print 'Error occurred'
-        print 'Only', cluster_num, ' clusters created'
-        return False
-    #print 'Slopes', slopes
-    junction_left = False
-    junction_right = False
-    if cluster_num == 7:
-        #Check Left Wall straight
-        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
-            junction_left = True
-            #print 'Rule1'
-        #Check Right Wall straight
-        if not is_vertical(slopes[5]) or not is_vertical(slopes[6]):
-            junction_right = True
-            #print 'Rule2'
-        #Check Front not straight
-        if not is_max_dist(mus_x[4], mus_y[4]) and is_horizontal(slopes[4]):
-            junction_left = True
-            junction_right = True
-            #print 'Rule3'
-    if cluster_num == 5:
-        #Check Left Wall straight
-        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
-            junction_left = True
-            #print 'Rule1'
-        #Check Right Wall straight
-        if not is_vertical(slopes[3]) or not is_vertical(slopes[4]):
-            junction_right = True
-            #print 'Rule2'
-        #Check Front not straight
-        if not is_max_dist(mus_x[2], mus_y[2])and is_horizontal(slopes[2]):
-            junction_left = True
-            junction_right = True
-            #print 'Rule3'
-    if cluster_num == 6:
-        #Fixes unknown error
-        slope_right = slopes[4]
-        slope_left = slopes[5]
-        slopes[4] = slope_left
-        slopes[5] = slope_right
 
-        #Check Left Wall straight
-        if not is_vertical(slopes[0]) or not is_vertical(slopes[1]):
-            junction_left = True
-            #print 'Rule1'
-        #Check Right Wall straight
-        if not is_vertical(slopes[5]) or not is_vertical(slopes[4]):
-            junction_right = True
-            #print 'Rule2'
-        #Check Front not straight
-        if (not is_max_dist(mus_x[2], mus_y[2]) and is_horizontal(slopes[2])) or (not is_max_dist(mus_x[3], mus_y[3]) and is_horizontal(slopes[3])):
-            junction_left = True
-            junction_right = True
-            #print 'Rule3'
-    if cluster_num == 4:
-                #Check Left Wall straight
-        if not is_vertical(slopes[0]):
-            junction_left = True
-            #print 'Rule1'
-        #Check Right Wall straight
-        if not is_vertical(slopes[3]):
-            junction_right = True
-            #print 'Rule2'
-        #Check Front not straight
-        if (not is_max_dist(mus_x[2], mus_y[2]) and is_horizontal(slopes[2])) or (not is_max_dist(mus_x[1], mus_y[1]) and is_horizontal(slopes[1])):
-            junction_left = True
-            junction_right = True
-            #print 'Rule3'
-    return ([mus_x, mus_y, clusters_xd, clusters_yd, clusters_xl, clusters_yl, slopes], [junction_left, junction_right])
-
-def algorithm(data, plot_bool):
-    x = []
-    y = []
-    angles = []
-    distances = []
-    for angle, distance in data:
-        angles.append(deg_to_rad(angle))
-        distances.append(distance)
-        x.append(distance*math.cos(deg_to_rad(angle)))
-        y.append(distance*math.sin(deg_to_rad(angle)))
-    X = np.concatenate((np.array([x]), np.array([y])), axis=0).T
-
-    mu, clusters, labels = find_centers(X,K)
-    result = stage_1(mu, clusters, labels)
-    if result:
-        if plot_bool:
-            plot_data(result[0])
-        return result[1]
-    else:
-        print 'x=', angles, ';y=', distances, ";polar(x,y,'+');"

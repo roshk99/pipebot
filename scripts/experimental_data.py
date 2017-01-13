@@ -51,60 +51,16 @@ data23 = [(25.0, 22.98081727522954), (26.787141375916566, 19.053418235645704), (
 data24 = [(25.0, 22.927630429291487), (21.05355958434887, 10.653145955143152), (26.3577939817087, 12.835130683867863), (31.433056454795842, 15.75831903502281), (35.41220975633407, 17.555395864817818), (39.222771367922206, 19.341019020996537), (43.35863442044255, 22.791945220679356), (51.20990986887767, 20.82170356476624), (53.24361112960011, 20.161504713014313), (55.600389732940286, 20.162608903740214), (58.156103801685276, 20.079010933619006), (60.98810105972591, 20.474209506280175), (62.957073440838805, 20.357194437526445), (65.33028640908114, 20.2874223908687), (68.03343281644395, 20.641894593434287), (70.82060672715302, 21.187457178511902), (73.65742378952204, 21.803219198914512), (76.89424049343489, 22.308922300636986), (79.11591789469826, 22.872889799741603), (82.54784943244228, 24.245647964774587), (85.36741750151165, 24.454461500414176), (88.49266167168648, 25.25063993119649), (91.3737352201357, 25.242874352675084), (98.97254351449453, 27.542231029235875), (101.78939283765969, 27.47843845726708), (104.08985698747604, 21.865792480853955), (105.8744212940331, 13.561079024941124), (107.82801161648673, 10.925736025281717), (110.53405669126975, 11.830506589620052), (114.0258746319556, 14.943274603633888), (121.30371058881632, 14.844574956347842), (119.79033925727745, 13.84587498760822), (122.49379043832971, 12.945197263367131), (125.0666695286732, 12.016217264858275), (127.63300977090998, 11.368649524532254), (130.15603842440018, 10.648922122722592), (133.53087631921275, 9.933481797370403), (135.85663780575618, 9.463535699641607), (139.59665925694836, 8.797543913976183), (144.1210768851813, 8.358179384384927), (145.98861028475199, 8.099214595327112), (149.76123585610594, 8.069122123682437), (156.2242312422317, 8.055775270699518), (154.0, 6.6223113975723)]
 
 #Printing dataset
-#print algorithm(data7, True)
+print algorithm(data5)
+# correct = [1, 5, 11, 12]
+# incorrect = [2, 6, 13, 14]
+# error = [3, 4, 7, 8, 9, 10, 15]
+# datasets = [data1, data2, data3, data4, data5, data6, data7, data8, data9, data10, data11, data12, data13, data14, data15, data16, data17, data18, data19, data20, data21, data22, data23, data24]
+# answers = [[True, True], [True, True], [False, True], [False, True], [True, False], [True, False], [False, False], [False, False], [False, True], [False, True], [True, False], [True, False], [True, False], [True, False], [False, True], [False, True], [True, True], [True, True], [True, True], [True, True], [True, True], [True, True]]
 
-# if not algorithm(data1, False) == [True, True]:
-# 	print 'Error Data1'
-# if not algorithm(data2, False) == [True, True]:
-# 	print 'Error Data2'
-# if not algorithm(data3, False) == [False, True]:
-# 	print 'Error Data3'
-# if not algorithm(data4, False) == [False, True]:
-# 	print 'Error Data4'
-# if not algorithm(data5, False) == [True, False]:
-# 	print 'Error Data5'
-# if not algorithm(data6, False) == [True, False]:
-# 	print 'Error Data6'
-# if not algorithm(data7, False) == [False, False]:
-# 	print 'Error Data7'
-# if not algorithm(data8, False) == [False, False]:
-# 	print 'Error Data8'
-# if not algorithm(data9, False) == [False, True]:
-# 	print 'Error Data9'
-# if not algorithm(data10, False) == [False, True]:
-# 	print 'Error Data10'
-# if not algorithm(data11, False) == [True, False]:
-# 	print 'Error Data11'
-# if not algorithm(data12, False) == [True, False]:
-# 	print 'Error Data12'
-# if not algorithm(data13, False) == [True, False]:
-# 	print 'Error Data13'
-# if not algorithm(data14, False) == [True, False]:
-# 	print 'Error Data14'
-# if not algorithm(data15, False) == [False, True]:
-# 	print 'Error Data15'
-# if not algorithm(data16, False) == [False, True]:
-# 	print 'Error Data16'
-# if not algorithm(data17, False) == [True, True]:
-# 	print 'Error Data17'
-# if not algorithm(data18, False) == [True, True]:
-# 	print 'Error Data18'
-# if not algorithm(data19, False) == [True, True]:
-# 	print 'Error Data19'
-# if not algorithm(data20, False) == [True, True]:
-# 	print 'Error Data20'
-# if not algorithm(data21, False) == [True, True]:
-# 	print 'Error Data21'
-# if not algorithm(data22, False) == [True, True]:
-# 	print 'Error Data22'
-# if not algorithm(data23, False) == [True, True]:
-# 	print 'Error Data23'
-# if not algorithm(data24, False) == [True, True]:
-# 	print 'Error Data24'
-x=[]
-y=[]
-for angle, distance in data11:
-	x.append(distance*math.cos(angle*math.pi/180.0))
-	y.append(distance*math.sin(angle*math.pi/180.0))
-print 'x=', x, ';y=', y, ";plot(x,y,'.','MarkerSize', 20)"
-print 'Done'
+# i = 1
+# for data, answer in zip(datasets, answers):
+# 	result = algorithm(data)
+# 	if not result[0] == answer[0] or not result[1] == answer[1]:
+# 		print 'Error with Dataset', i, 'Answer is', result, 'instead of', answer
+# 	i += 1
