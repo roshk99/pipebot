@@ -2,4 +2,5 @@
   <node name="conductor" pkg="pipebot" type="conductor.py" output="screen" />
   <node name="command_sensor_server" pkg="pipebot" type="command_sensor_server.py" output="screen" />
   <node name="command_servo_server" pkg="pipebot" type="command_servo_server.py" output="screen" />
+  <node name="DCMotor_subscriber" pkg="pipebot" type="DCMotor_subscriber.py" output="screen" />
 </launch>
