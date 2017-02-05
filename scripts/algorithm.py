@@ -1,421 +1,213 @@
 #!/usr/bin/env python
 
-import rospy
+#import rospy
 import numpy as np
-import random
 import math
-from scipy import interpolate
+from scipy import interpolate, stats
+from rdp import rdp
+from pipebot.msg import Classification
 
-initial_guess = [np.array([-8, 5]), np.array([8, 5]), np.array([-8, 8]), np.array([8, 8]),np.array([0, 20]),np.array([-10, 20]),np.array([10, 20]) ]
-K = 7
-MIN_CLUSTER_SIZE = 3
-SMOOTH = True
-OUTLIER_REMOVAL = True
-OUTLIER_MAX_DIST = 8
-VERT_TOL = 1
-VERT_SLOPE = 8
-SPLINE_ORDER = 5
-SMOOTHING_DEGREE = 0.5
-LEFT_ANGLE1 = 155
-LEFT_ANGLE2 = 105
-RIGHT_ANGLE1 = 75
-RIGHT_ANGLE2 = 25
+EPSILON = 0.05
+TOL = 0.1
+MIN_SEG_LENGTH = 2
+TOL2 = 3
+TOL3 = 10
+ZERO_ANGLE=7
+MID_ANGLE=90
+T_ONE_ANGLE=18
+SUM_TOL=24
 
-class Cluster:
-	def __init__(self, id_val, x, y):
-		self.id = id_val
-		self.mu = [x,y]
-	def __str__(self):
-		s = "Id: {0}, Mean: [{1}, {2}]".format(self.id, self.mu[0], self.mu[1])
-		return s
-	def get_id(self):
-		return self.id
-	def get_mu(self):
-		return list(self.mu)
-	def update_mean(self, x, y):
-		self.mu = [x,y]
+PRINTBOOL = False
+DEBUGBOOL = False
 
+def rad_to_deg(ang):
+	return ang*180.0/math.pi
 
-class DataPoint:
-	def __init__(self, id_val, x, y, angle):
-		self.id = id_val
-		self.coordinates = [x, y]
-		self.cluster = None
-		self.angle = angle
-		self.slope = None
-		self.smoothed_coordinates = [None, None]
-	def __str__(self):
-		s = "Id: {0}, Angle: {4}, Coordinates: [{1}, {2}], Cluster_Id: {3}, Slope: {5}".format(self.id, self.coordinates[0], self.coordinates[1], self.cluster, self.angle, self.slope)
-		return s
-	def get_id(self):
-		return self.id
-	def get_coordinates(self):
-		return list(self.coordinates)
-	def get_cluster(self):
-		return self.cluster
-	def set_cluster(self, cluster):
-		self.cluster = cluster
-	def get_angle(self):
-		return self.angle
-	def add_slope(self, slope):
-		self.slope = slope
-	def add_smoothed_coordinates(self, x, y):
-		self.smoothed_coordinates = [x,y]
-	def get_smoothed_coordinates(self):
-		return list(self.smoothed_coordinates)
-	def get_slope(self):
-		return self.slope
+def plot_matlab(x, y, xnew, ynew, segments=False):
+	print '_________'
+	if segments:
+		for segment in segments:
+				print 'plot(', list(segment['x']), ',', list(segment['y']), ", 'r', 'LineWidth', 2);hold on;"
+	print 'x=', x, ';y=', y, ';xnew=', xnew, ';ynew=', ynew, ";hold on;plot(xnew, ynew, 'r.', 'MarkerSize', 30); plot(x,y,'k.', 'MarkerSize', 20); axis square;hold off;"
+	print '_________'
 
+def algorithm(xvec,yvec, printbool = False, debugbool = False):
 
-class Clusters:
-	def __init__(self):
-		self.clusters = {}
-	def __str__(self):
-		s = ""
-		for cluster in self.clusters.values():
-			s = "{0}, [{1}]".format(s, str(cluster))
-		return s
-	def cluster_added(self, cluster_id):
-		return cluster_id in self.clusters.keys()
-	def add_cluster(self, cluster):
-		if cluster.get_id() not in self.clusters.keys():
-			self.clusters[cluster.get_id()] = cluster
-		else:
-			print 'Replacing a Cluster'
-			self.clusters[cluster.get_id()] = cluster
-	def get_clusters(self):
-		return list(self.clusters.values())
-	def formatted_clusters(self):
-		s = ""
-		for cluster in self.clusters.values():
-			mu = cluster.get_mu()
-			s = "{0}, [{1}, {2}]".format(s, mu[0], mu[1])
-		return s
-	def get_cluster_ids(self):
-		return list(self.clusters.keys())
-	def remove_cluster(self, cluster_id):
-		self.clusters.pop(cluster_id)
-	def get_cluster(self, cluster_id):
-		return self.clusters[cluster_id]
-
-
-class DataPoints:
-	def __init__(self):
-		self.points = {}
-	def __str__(self):
-		s = ""
-		for point in self.points.values():
-			s = "{0}, [{1}]".format(s, str(point))
-		return s
-	def get_points_array(self):
-		x = []
-		y = []
-		for point in self.points.values():
-			coordinates = point.get_coordinates()
-			x.append(coordinates[0])
-			y.append(coordinates[1])
-		point_arr = np.concatenate((np.array([x]), np.array([y])), axis=0).T
-		return point_arr
-	def add_point(self, point):
-		if point.get_id() not in self.points.keys():
-			self.points[point.get_id()] = point
-		else:
-			print 'Replacing a Point'
-			self.points[point.get_id()] = point
-	def remove_point(self, point):
-		if point.get_id in self.points.keys():
-			self.points.pop(point.get_id())
-	def get_points(self):
-		return list(self.points.values())
-	def find_cluster(self, point_id, mu):
-		point = self.points[point_id]
-		coordinates = np.array(point.get_coordinates())
-	 	mu_key_arr = []
-	 	for i in enumerate(mu):
-	 		if mu[i[0]][0] is not None:
-	 			mu_key_arr.append(np.linalg.norm(coordinates-mu[i[0]]))
- 			else:
- 				mu_key_arr.append(None)
-		bestmukey = np.argmin(np.array(mu_key_arr))
-	 	return bestmukey
- 	def get_cluster_points(self, cluster_id):
- 		cluster_points = []
- 		for point in self.points.values():
- 			if point.get_cluster() == cluster_id:
- 				cluster_points.append(point)
-		return cluster_points
-	def cluster_points_str(self, cluster_id):
-		cluster_points = self.get_cluster_points(cluster_id)
-		s = ""
-		for point in cluster_points:
-			coordinates = point.get_coordinates()
-			s = "{0}, [{1},{2}]".format(s, coordinates[0], coordinates[1])
-		return s
-	def remove_cluster(self, cluster_id):
-		cluster_points = self.get_cluster_points(cluster_id)
-		for point in cluster_points:
-			self.remove_point(point)
-	def add_smoothed_coordinates(self, point_id, x, y):
-		point = self.points[point_id]
-		point.add_smoothed_coordinates(x, y)
-	def get_ordered_points(self):
-		points = []
-		for key in sorted(self.points.keys()):
-			points.append(self.points[key])
-		return points
-	def add_slope(self, point_id, slope):
-		point = self.points[point_id]
-		point.add_slope(slope)
-	def assign_slopes(self, cluster_id, outlier_removal=True, spline_order=3, smoothing_degree=0.3):
-		cluster_points = self.get_cluster_points(cluster_id)
-		x_raw = []
-		y_raw = []
-		id_raw = []
-		for point in cluster_points:
-			coordinates = point.get_coordinates()
-			x_raw.append(coordinates[0])
-			y_raw.append(coordinates[1])
-			id_raw.append(point.get_id())
-		mu_x = sum(x_raw)/float(len(x_raw))
-		mu_y = sum(y_raw)/float(len(y_raw))
-		# if outlier_removal:
-		# 	x_o = []
-		# 	y_o = []
-		# 	for x,y,id_val in zip(x_raw,y_raw,id_raw):
-		# 		dist = math.sqrt((x-mu_x)**2 + (y-mu_y)**2)
-		# 		if dist < OUTLIER_MAX_DIST:
-		# 			x_o.append(x)
-		# 			y_o.append(y)
-		# 		else:
-		# 			self.remove_point(self.points[id_val])
-		# 	x_raw = x_o
-		# 	y_raw = y_o
-		
-		#Sort
-		x_raw = np.array(x_raw)
-		y_raw = np.array(y_raw)
-		id_raw = np.array(id_raw)
-		sorted_idxs = np.argsort(x_raw)
-		x_raw = x_raw[sorted_idxs]
-		y_raw = y_raw[sorted_idxs]
-		id_raw = id_raw[sorted_idxs]
-
-		tck = interpolate.splrep(x_raw, y_raw, k=min(spline_order, len(x_raw)-1), s=smoothing_degree)
-		x_new = x_raw
-		y_new = interpolate.splev(x_new, tck)
-		y_new_der = interpolate.splev(x_new, tck, der=1)
-
-		for ii in range(len(id_raw)):
-			self.add_slope(id_raw[ii], y_new_der[ii])
-			self.add_smoothed_coordinates(id_raw[ii], x_new[ii], y_new[ii])
-
-
-def deg_to_rad(deg):
-	return deg*math.pi/180.0
-
-
-def rad_to_deg(rad):
-	return rad*180.0/math.pi
-
-
-def find_cluster_mean(points):
-	x = []
-	y = []
-	for point in points:
-		coordinates = point.get_coordinates()
-		x.append(coordinates[0])
-		y.append(coordinates[1])
-	return np.mean(x), np.mean(y)
-
-
-def cluster_points(data_points, clusters, mu):
-	for point in data_points.get_points():
-		cluster_id = data_points.find_cluster(point.get_id(), mu)
-		if not clusters.cluster_added(cluster_id) and not cluster_id == None:
-			cluster = Cluster(cluster_id, mu[cluster_id][0], mu[cluster_id][1])
-			clusters.add_cluster(cluster)
-		point.set_cluster(cluster_id)
-	return clusters
-
-
-def reevaluate_centers(data_points, clusters, mu):
-	newmu = []
-	for cluster in clusters.get_clusters():
-		cluster_points = data_points.get_cluster_points(cluster.get_id())
-		if len(cluster_points) > 0:
-			mu_x, mu_y = find_cluster_mean(cluster_points)
-			cluster.update_mean(mu_x, mu_y)
-			newmu.append(np.array([mu_x, mu_y]))
-		else:
-			newmu.append(np.array([None, None]))
-
-	return newmu
- 
-def has_converged(mu, oldmu):
-    list1 = []
-    list2 = []
-    for a1, a2 in zip(mu, oldmu):
-        list1.append(tuple(a1))
-        list2.append(tuple(a2))
-    return set(list1) == set(list2)
-
-
-def find_centers(data_points, clusters, K):
-	X = data_points.get_points_array()
-
-	# Initialize to K random centers
-	oldmu = random.sample(X, K)
-	mu = initial_guess
-	while not has_converged(mu, oldmu):
-		oldmu = mu
-		# Assign all points in X to clusters
-		cluster_points(data_points, clusters, mu)
-		# Reevaluate centers
-		mu = reevaluate_centers(data_points, clusters, oldmu)
-	return data_points, clusters
-
-
-def process_data(data_points, clusters):
-	for cluster_id in clusters.get_cluster_ids():
-		cluster_points = data_points.get_cluster_points(cluster_id)
-		if len(cluster_points) < MIN_CLUSTER_SIZE:
-			data_points.remove_cluster(cluster_id)
-			clusters.remove_cluster(cluster_id)
-		else:
-			data_points.assign_slopes(cluster_id, OUTLIER_REMOVAL, SPLINE_ORDER, SMOOTHING_DEGREE)
-
-
-def get_slope_vec(data_points):
-	slopes = {}
-	for point in data_points.get_points():
-		slope = point.get_slope()
-		angle = point.get_angle()
-		slopes[angle] = slope
-	return slopes
-
-
-def is_vertical(slope):
-	return abs(slope) + VERT_TOL > VERT_SLOPE
-
-
-def coarse_classification(data_points, clusters):
-	slopes = get_slope_vec(data_points)
-	junction_right = False
-	junction_left = False
-
-	for angle, slope in slopes.items():
-		if slope:
-			if angle < deg_to_rad(RIGHT_ANGLE1) and angle > deg_to_rad(RIGHT_ANGLE2):
-				if not is_vertical(slope):
-					junction_right = True
-			elif angle < deg_to_rad(LEFT_ANGLE1) and angle > deg_to_rad(LEFT_ANGLE2):
-				if not is_vertical(slope):
-					junction_left = True
-			#print angle*180/math.pi, slope
-	return [junction_left, junction_right]
-
-
-def generate_matlab_plot(data_points):
-	x = []
-	y = []
-	x_smooth = []
-	y_smooth = []
-	for point in data_points.get_points():
-		coordinates = point.get_coordinates()
-		smoothed_coordinates = point.get_smoothed_coordinates()
-		x.append(coordinates[0])
-		y.append(coordinates[1])
-		x_smooth.append(smoothed_coordinates[0])
-		y_smooth.append(smoothed_coordinates[1])
-
-	print 'x=', x, ';y=', y, ';x_smooth=', x_smooth, ';y_smooth=', y_smooth, ";plot(x,y,'.b', 'MarkerSize', 20);hold on; plot(x_smooth,y_smooth, 'r');hold off; axis square; axis equal;"
-
-
-def pre_fine_classification(data_points, clusters):
-	angles_left = []
-	slopes_left = []
-	for point in data_points.get_points():
-		angle = point.get_angle()
-		slope = point.get_slope()
-		if angle < deg_to_rad(LEFT_ANGLE1) and angle > deg_to_rad(LEFT_ANGLE2):
-			angles_left.append(rad_to_deg(angle))
-			slopes_left.append(slope)
-	idxs = np.argsort(angles_left)
-	angles_left = list(np.array(angles_left)[idxs])
-	slopes_left = list(np.array(slopes_left)[idxs])
-	
-	angles_right = []
-	slopes_right = []
-	for point in data_points.get_points():
-		angle = point.get_angle()
-		slope = point.get_slope()
-		if angle < deg_to_rad(RIGHT_ANGLE1) and angle > deg_to_rad(RIGHT_ANGLE2):
-			angles_right.append(rad_to_deg(angle))
-			slopes_right.append(slope)
-	idxs = np.argsort(angles_right)
-	angles_right = list(np.array(angles_right)[idxs])
-	slopes_right = list(np.array(slopes_right)[idxs])
-	
-	print angles_left, slopes_left
-	print angles_right, slopes_right
-	return [angles_left, angles_right], [slopes_left, slopes_right]
-
-def fine_classification_left(data_points, clusters):
-	result = pre_fine_classification(data_points, clusters)
-
-
-def fine_classification_right(data_points, clusters):
-	result = pre_fine_classification(data_points, clusters)
-
-
-def fine_classification_both(data_points, clusters):
-	result = pre_fine_classification(data_points, clusters)
-
-
-def algorithm(data, plot=False, debug=False):
-	data_points = DataPoints()
-	clusters = Clusters()
-	# i = 0
-	# for point in data:
-	# 	if point.x == 0.0:
-	# 		angle = math.pi/2
-	# 	else:
-	# 		angle = math.atan(point.y / point.x)
-	# 	point = DataPoint(i, point.x, point.y, deg_to_rad(angle))
-	# 	data_points.add_point(point)
-	# 	i += 1
-	
-	i = 0
-	for xval, yval in zip(x,y):
-		if xval == 0.0:
+	#Get angles and distances from x,y data
+	angles = []
+	distances = []
+	for x, y in zip(xvec, yvec):
+		if x == 0.0:
 			angle = math.pi/2
 		else:
-			angle = math.atan2(yval,xval)
+			angle = math.atan2(y,x)
 			if angle < 0: angle += 2*math.pi
-		point = DataPoint(i, xval, yval, angle)
-		data_points.add_point(point)
-		i += 1
-	find_centers(data_points, clusters, K)
-	process_data(data_points, clusters)
-	coarse_junction = coarse_classification(data_points, clusters)
-	
-	# if coarse_junction[0] and not coarse_junction[1]:
-	# 	fine_classification_left(data_points, clusters)
-	# elif not coarse_junction[0] and coarse_junction[1]:
-	# 	fine_classification_right(data_points, clusters)
-	# else:
-	# 	fine_classification_both(data_points, clusters)
-	# if plot:
-	# 	generate_matlab_plot(data_points)
-	# return coarse_junction
-	
+		angles.append(rad_to_deg(angle))
+		distances.append(math.sqrt(x**2 + y**2))
+
+	#Convert to numpy arrays
+	angles = np.array(angles)
+	x = np.array(xvec)
+	y = np.array(yvec)
+	distances = np.array(distances)
+
+	#Sort by increasing angle
+	sort_idx = np.argsort(angles)
+	sort_angles = angles[sort_idx]
+	sort_x = x[sort_idx]
+	sort_y = y[sort_idx]
+	sort_distances = distances[sort_idx]
+
+	#Perform rdp algorithm and get new data
+	X = np.array([sort_x, sort_y]).T
+	mask = rdp(X, epsilon=0.05, return_mask=True)
+	X1 = X[mask]
+	xnew = []
+	ynew = []
+	for point in X1:
+		xnew.append(point[0])
+		ynew.append(point[1])
+
+	#Get segment break indices
+	indxs = np.array(np.where(mask)).flatten()
+	if indxs[0] != 0:
+		np.insert(indxs, 0, 0)
+	if indxs[len(indxs)-1] != len(sort_x):
+		indxs = np.append(indxs, len(sort_x))
+
+	#Get the segments (should have 3)
+	segments = []
+	for ii in range(len(indxs)-1):
+		xvec = sort_x[indxs[ii]:indxs[ii+1]]
+		yvec = sort_y[indxs[ii]:indxs[ii+1]]
+		angle = sort_angles[indxs[ii]:indxs[ii+1]]
+		distance = sort_distances[indxs[ii]:indxs[ii+1]]
+		if len(distance) > MIN_SEG_LENGTH:
+			if abs(distance[0] - distance[1]) > TOL:
+				xvec = xvec[1:]
+				yvec = yvec[1:]
+				angle = angle[1:]
+				distance = distance[1:]
+			if abs(distance[len(distance)-1] - distance[len(distance)-2]) > TOL:
+				xvec = xvec[:len(distance)-1]
+				yvec = yvec[:len(distance)-1]
+				angle = angle[:len(distance)-1]
+				distance = distance[:len(distance)-1]
+			segments.append({'x': xvec, 'y': yvec, 'angle': angle, 'distance': distance})
+
+	#Check number of segments
+	if len(segments) != 3:
+		if printbool:
+			print 'Only', len(segments), 'generated'
+			plot_matlab(list(sort_x), list(sort_y), xnew, ynew)
+	else:
+		#Linearize each segment and get slope
+		for segment in segments:
+			slope, intercept, r_value, p_value, std_err = stats.linregress(segment['x'],segment['y'])
+			segment['slope'] = slope
+
+		#Get LEFT and RIGHT values for each segment
+		for segment in segments:
+			numpoints = len(segment['x'])
+			segment['left'] = False
+			segment['right'] = False
+			angle1 = rad_to_deg(math.atan2(segment['y'][0], segment['x'][0]))
+			angle2 = rad_to_deg(math.atan2(segment['y'][numpoints-1], segment['x'][numpoints-1]))
+			if angle2 < 90 + TOL2:
+				segment['right'] = True
+			if angle1 > 90 - TOL2:
+				segment['left'] = True
+			if angle1 < 90 + TOL2 and angle2 > 90 - TOL2:
+				segment['left'] = True
+				segment['right'] = True
+		
+		#Get intermediate angles
+		incl_angles = []
+		for ii in range(len(segments) - 1):
+			m1 = segments[ii]['slope']
+			m2 = segments[ii+1]['slope']
+			incl_angle = math.atan2(abs(m1-m2), abs(1+m1*m2))
+			if incl_angle < 0:
+				incl_angle = incl_angle + 2*math.pi
+			incl_angles.append(rad_to_deg(incl_angle))
+		
+		if debugbool:
+			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
+			print incl_angles
+		
+		output = rules_engine(segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right'], incl_angles[0], incl_angles[1])
+		return output
+
+def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
+
+	results = []
+	lefts = 0
+	rights = 0
+
+	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and angle2> ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE:
+		results.append('YL')
+		lefts += 1
+	if not left0 and left1 and left2 and angle1<T_ONE_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
+		results.append('TL')
+		lefts += 1
+	if not left0 and right1 and left2 and angle1<MID_ANGLE and angle1>ZERO_ANGLE and angle2<ZERO_ANGLE:
+		results.append('YR')
+		rights += 1
+	if not left0 and not left1 and right0 and right1 and left2 and not right2:
+		results.append('TR')
+		rights += 1
+	if left1 and right0 and right1 and left2 and right2 and ab(angle1-MID_ANGLE)<ZERO_ANGLE and abs(ANGLE2-MID_ANGLE)<ZERO_ANGLE:
+		results.append('TLR')
+		lefts += 1
+		rights += 1
+	if left1 and right0 and right1 and left2 and not right2 and angle1>ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE:
+		results.append('UR')
+		lefts += 1
+		rights += 1
+	if right0 and right1 and left2 and right2 and angle2>ZERO_ANGLE:
+		results.append('UL')
+		lefts += 1
+		rights += 1
+
+	junction_left = False
+	junction_right = False
+	if len(results) == 0:
+		print 'Inconclusive Classification Or Straight'
+		return junction_left, junction_right, 'Straight'
+	elif len(results) == 1:
+		if lefts > 0:
+			junction_left = True
+		if rights > 0:
+			junction_right = True
+		return junction_left, junction_right, results[0]
+	else:
+		if lefts > 0:
+			junction_left = True
+		if rights > 0:
+			junction_right = True
+		print 'Inconclusive Classification Or Straight'
+		return junction_left, junction_right, 'Unknown'
+
+def get_x_y(points):
+	xvec = []
+	yvec = []
+	for point in points:
+		xvec.append(point.x)
+		yvec.append(point.y)
+	return xvec, yvec
+
 def main(data):
 	rospy.loginfo("Processed Data First Point: " + str(data.points[0].x) + "," + str(data.points[0].y))
-	#result = algorithm(data.points)
-	#print 'result', result
+	xvec, yvec = get_x_y(data.points)
+	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
+	rospy.loginfo("Junction Left:" + str(result[0]) + " , Junction Right: " + str(result[1]) + " , Classification: " + result[2])
 
-# result = algorithm(None, True)
-# print result
-    
+	output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2])
+	pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
+    pub.publish(output)
+
+def test_main(xvec, yvec):
+	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
+	print 'result', result
 
 

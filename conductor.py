@@ -8,6 +8,7 @@ from scripts import algorithm, process_data
 import math 
 import time
 from sensor_msgs.msg import LaserScan, PointCloud
+from pipebot.msg import Classification
 
 BUFFER_LENGTH = 3
 	
@@ -16,8 +17,11 @@ def main():
 	rate = rospy.Rate(10) # 10hz
 	rospy.Subscriber('scan', LaserScan, process_data.main)
 	rospy.Subscriber('processedData', PointCloud, algorithm.main)
+	rospy.Subscriber('classificationResult', Classification, conductor.motion_plan)
 	rospy.spin()
 		
+def motion_plan(data):
+	rospy.info("Algorithm Result" + data.junction)
 
 if __name__ == '__main__':
     try:
