@@ -12,10 +12,11 @@ TOL = 0.1
 MIN_SEG_LENGTH = 2
 TOL2 = 3
 TOL3 = 10
-ZERO_ANGLE=10
+ZERO_ANGLE=8
 MID_ANGLE=90
 U_ANGLE = 40
 Y_ANGLE = 60
+Y_ANGLE2 = 50
 
 
 PRINTBOOL = False
@@ -148,7 +149,7 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 	lefts = 0
 	rights = 0
 
-	if left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE:
+	if left1 and left2 and angle1<ZERO_ANGLE and angle2<MID_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and abs(angle2-Y_ANGLE2)<ZERO_ANGLE:
 		results.append('YLF')
 		lefts += 1
 	if not left0 and left1 and left2 and angle1<ZERO_ANGLE and abs(angle2-MID_ANGLE)<ZERO_ANGLE:
@@ -175,7 +176,7 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 	if not left0 and right0 and not left1 and right1 and left2 and angle2 < ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle1-angle2)>ZERO_ANGLE and abs(angle1-60)>5:
 		results.append('YRB')
 		rights +=1
-	if not left0 and left1 and left2 and not right2 and not right1 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1>ZERO_ANGLE:
+	if not left0 and right0 and left1 and not right1 and left2 and not right2 and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1<ZERO_ANGLE and abs(angle2-Y_ANGLE2)>ZERO_ANGLE:
 		results.append('YLB')
 		lefts +=1
 	if left1 and right0 and right1 and left1 and left2 and angle1 > ZERO_ANGLE and abs(angle1-MID_ANGLE)>ZERO_ANGLE and abs(angle2-MID_ANGLE)>ZERO_ANGLE and angle1 < angle2 and abs(angle1-U_ANGLE)>5:
