@@ -15,7 +15,7 @@ TOL3 = 10
 ZERO_ANGLE=8
 MID_ANGLE=90
 U_ANGLE = 40
-Y_ANGLE = 60
+Y_ANGLE = 54
 Y_ANGLE2 = 50
 
 PRINTBOOL = False
@@ -132,14 +132,21 @@ def algorithm(xvec,yvec, printbool = False, debugbool = False):
 				incl_angle = incl_angle + 2*math.pi
 			incl_angles.append(rad_to_deg(incl_angle))
 		
-		if debugbool:
-			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
-			print incl_angles
+
 		if printbool:
 			plot_matlab(x,y,xnew,ynew,segments)
 		
 		output = rules_engine(segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right'], incl_angles[0], incl_angles[1])
-		return output
+		if not output:
+			return None
+
+		distance = get_distance(segments, output)
+
+		if debugbool:
+			print segments[0]['left'], segments[0]['right'], segments[1]['left'], segments[1]['right'], segments[2]['left'], segments[2]['right']
+			print incl_angles
+			print distance
+		return output, distance
 
 
 def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
@@ -206,6 +213,25 @@ def rules_engine(left0, right0, left1, right1, left2, right2, angle1, angle2):
 			junction_right = True
 		return junction_left, junction_right, 'Unknown'
 
+def get_distance(segments, output):
+	distance = 0
+	if not output[0] and output[1]:
+		rightpoint = segments[0]['y'][-1]
+		leftpoint = segments[2]['y'][-1]
+		distance = rightpoint - leftpoint
+	if output[0] and not output[1]:
+		rightpoint = segments[0]['y'][0]
+		leftpoint = segments[2]['y'][0]
+		distance = leftpoint - rightpoint
+	if output[0] and output[1]:
+		rightpoint = segments[0]['y'][0]
+		leftpoint = segments[1]['y'][0]
+		distance1 = leftpoint - rightpoint
+		rightpoint = segments[1]['y'][-1]
+		leftpoint = segments[2]['y'][0]
+		distance2 = rightpoint - leftpoint
+		distance = min(distance1, distance2)
+
 def get_x_y(points):
 	xvec = []
 	yvec = []
@@ -219,12 +245,11 @@ def main(data):
 		xvec, yvec = get_x_y(data.points)
 		result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
 		if result:
-			output = Classification(junction_left=result[0], junction_right=result[1], junction=result[2], dist_till_turn = 0)
+			output = Classification(junction_left=result[0][0], junction_right=result[0][1], junction=result[0][2], dist_till_turn = result[1])
 			pub = rospy.Publisher('classificationResult', Classification, queue_size=10)
 			pub.publish(output)
 		else:
 			print "No Result"
-
 
 def test_main(xvec, yvec):
 	result = algorithm(xvec, yvec, PRINTBOOL, DEBUGBOOL)
