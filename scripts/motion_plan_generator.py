@@ -8,7 +8,7 @@ import time
 import math
 
 MOTION_MODES = ['Normal forward', 'Halt', 'Move backward', 'Turn left forward', 'Turn right forward']
-NECK_ANGLE_INCREMENT = 20
+NECK_ANGLE_INCREMENT = 10
 NORMAL_DUTY_CYCLE = 100
 NORMAL_DUTY_CYCLE = 40
 TURNING_SPEED = 20
@@ -71,8 +71,14 @@ def turning(servo1, servo2):
         servo1_angle_increment = (servo1[t+1] - servo1_current_pos)/increment_num
         servo2_angle_increment = (servo2[t+1] - servo2_current_pos)/increment_num
         for i in range(increment_num - 1):
-            servo1_current_pos += 
-            neck_servo_publish_command1()
+            servo1_current_pos += servo1_angle_increment
+            servo2_current_pos += servo2_angle_increment
+            neck_servo_publish_command1(servo1_current_pos)
+            neck_servo_publish_command2(servo2_current_pos)
+            time.sleep(TURNING_TIME_INCREMENT)
+        neck_servo_publish_command1(servo1[t+1])
+        neck_servo_publish_command2(servo2[t+1])
+        time.sleep(TURNING_TIME_INCREMENT)
         
 def motion_modes(mode, turn_angle, duty_cycle_plan):
     #print 'Motion Mode:', mode
@@ -89,15 +95,19 @@ def motion_modes(mode, turn_angle, duty_cycle_plan):
         if turn_angle is 45:
             servo1 = []
             servo2 = []
+        	turning(servo1, servo2)
         elif turn_angle is -45:
             servo1 = []
             servo2 = []
+        	turning(servo1, servo2)
         elif turn_angle is 90:
             servo1 = []
             servo2 = []
+        	turning(servo1, servo2)
         elif turn_angle is -90:
             servo1 = []
             servo2 = []
+        	turning(servo1, servo2)
         else:
             print 'Unrecognized angle \n'
     
@@ -125,23 +135,29 @@ def motion_modes(mode, turn_angle, duty_cycle_plan):
         print "ERROR: mode input unvalid. Needs to be an integer from 0 to 4. "
         
 def ujoint_turn_algorithm(turn_dir):
-    servo_current_pos = SERVO_INIT_POS
-    if (turn_dir is "left"):
-        angle_change_sign = 1
-    elif (turn_dir is "right"):
-        angle_change_sign = -1
-    for i in range(5):
-        motor_publish_command([True,True, TURNING_SPEED])
-        time.sleep(TURNING_TIME_INCREMENT)
-        motor_publish_command([False, True, TURNING_SPEED])
-        servo_current_pos += NECK_ANGLE_INCREMENT * angle_change_sign
-        neck_servo_publish_command(servo_current_pos)
-    for i in range(5):
-        motor_publish_command([True,True, TURNING_SPEED])
-        time.sleep(TURNING_TIME_INCREMENT)
-        motor_publish_command([False, True, TURNING_SPEED])
-        servo_current_pos += NECK_ANGLE_INCREMENT * (-angle_change_sign)
-        neck_servo_publish_command(servo_current_pos)
+    # servo_current_pos = SERVO_INIT_POS
+    # if (turn_dir is "left"):
+    #     angle_change_sign = 1
+    # elif (turn_dir is "right"):
+    #     angle_change_sign = -1
+    # for i in range(9):
+    #     motor_publish_command([True,True, TURNING_SPEED])
+    #     time.sleep(TURNING_TIME_INCREMENT)
+    #     motor_publish_command([False, True, TURNING_SPEED])
+    #     servo_current_pos += NECK_ANGLE_INCREMENT * angle_change_sign
+    #     neck_servo_publish_command(servo_current_pos)
+    # for i in range(9):
+    #     motor_publish_command([True,True, TURNING_SPEED])
+    #     time.sleep(TURNING_TIME_INCREMENT)
+    #     motor_publish_command([False, True, TURNING_SPEED])
+    #     servo_current_pos += NECK_ANGLE_INCREMENT * (-angle_change_sign)
+    #     neck_servo_publish_command(servo_current_pos)
+    uservo1 = []
+    uservo2 = []
+    if (turn_dir is 'left'):
+    	turning(uservo1, uservo2)
+    else:
+    	turning([180-x for x in uservo1], [180-x for x in uservo2])
     
     
 def main(data):
